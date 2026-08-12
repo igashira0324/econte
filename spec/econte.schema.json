@@ -226,6 +226,9 @@
                             "chain_start",
                             "standalone"
                           ]
+                        },
+                        "chain_from": {
+                          "type": "string"
                         }
                       },
                       "required": [

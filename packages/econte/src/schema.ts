@@ -142,6 +142,10 @@ export const SourceSchema = z.object({
   // note: implementations must always emit this field explicitly.
   approved: z.boolean().default(false),
   material: SourceMaterialEnum.optional(),
+  // Shot id this one continues from when material === "chain". Referential
+  // integrity (must reference an existing Shot.id, not itself) is a
+  // document-level concern enforced in StoryboardSchema's superRefine below.
+  chain_from: z.string().optional(),
 });
 export type Source = z.infer<typeof SourceSchema>;
 
@@ -258,6 +262,8 @@ const StoryboardObjectSchema = z.object({
  *      `Character.id`.
  *   6. `Lyric.endMs > Lyric.startMs` — enforced on `LyricSchema` itself.
  *   7. Non-empty array constraints — enforced per-field above.
+ *   8. `Shot.source.chain_from`, if present, must reference an existing
+ *      `Shot.id` elsewhere in the document (not itself).
  */
 export const StoryboardSchema = StoryboardObjectSchema.superRefine((doc, ctx) => {
   // Rule 1: Character.id uniqueness within characters[].
@@ -289,7 +295,9 @@ export const StoryboardSchema = StoryboardObjectSchema.superRefine((doc, ctx) =>
   });
 
   // Rule 3 (shot id global uniqueness) and Rule 5 (subject referential
-  // integrity) both require walking every shot in every scene.
+  // integrity) both require walking every shot in every scene. Rule 8
+  // (chain_from referential integrity) needs the full shot-id set too, so
+  // it's checked in a second pass below once shotIds is fully populated.
   const shotIds = new Set<string>();
   doc.scenes.forEach((scene, sceneIndex) => {
     scene.shots.forEach((shot, shotIndex) => {
@@ -312,6 +320,27 @@ export const StoryboardSchema = StoryboardObjectSchema.superRefine((doc, ctx) =>
             path: ["scenes", sceneIndex, "shots", shotIndex, "subject"],
           });
         }
+      }
+    });
+  });
+
+  // Rule 8: Shot.source.chain_from referential integrity (and not self).
+  doc.scenes.forEach((scene, sceneIndex) => {
+    scene.shots.forEach((shot, shotIndex) => {
+      const chainFrom = shot.source?.chain_from;
+      if (chainFrom == null) return;
+      if (chainFrom === shot.id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Shot "${shot.id}"'s source.chain_from cannot reference itself`,
+          path: ["scenes", sceneIndex, "shots", shotIndex, "source", "chain_from"],
+        });
+      } else if (!shotIds.has(chainFrom)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Shot "${shot.id}"'s source.chain_from "${chainFrom}" references unknown shot id — no matching Shot.id elsewhere in the document`,
+          path: ["scenes", sceneIndex, "shots", shotIndex, "source", "chain_from"],
+        });
       }
     });
   });

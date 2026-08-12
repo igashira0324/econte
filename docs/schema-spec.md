@@ -90,7 +90,8 @@ regardless of host OS.
 | `seed` | integer | no | for reproducibility of `type: "generate"` shots |
 | `prompt` | string | no | the generation prompt, in whatever language the backend expects (convention: English, regardless of `idea`/`action`'s language) |
 | `approved` | boolean | yes | default `false` if omitted on input, but implementations MUST always emit it explicitly on output (never omit) — this is the machine-readable approval gate the whole pipeline hinges on |
-| `material` | enum | no | `chain` \| `chain_start` \| `standalone` — only meaningful for chained-video backends (e.g. Motion-Context-style generators): `chain_start` begins a new generation chain (fresh identity lock/framing), `chain` continues the previous shot's chain, `standalone` is a one-off (typical for character-less B-roll). Absent shots are treated as `chain_start` by runners that need this field, but econte itself does not assume a default — see `profiles/README.md` |
+| `material` | enum | no | `chain` \| `chain_start` \| `standalone` — only meaningful for chained-video backends (e.g. Motion-Context-style generators): `chain_start` begins a new generation chain (fresh identity lock/framing), `chain` continues from `chain_from`, `standalone` is a one-off (typical for character-less B-roll). Absent shots are treated as `chain_start` by runners that need this field, but econte itself does not assume a default — see `profiles/README.md` |
+| `chain_from` | string | no | when `material == "chain"`, the `id` of the shot this one continues from (must reference another `Shot.id` elsewhere in the document — referential integrity is enforced, see rule 8 below). Deliberately explicit rather than "the previous shot in document order": document order is for editorial/display purposes and a chain does not have to be contiguous with other material (a B-roll or a different chain's shots may be interleaved between two shots of the same chain). Meaningless when `material` is `chain_start`/`standalone`/absent |
 
 ### `Render`
 
@@ -120,6 +121,7 @@ Both implementations must enforce all of these, not just per-field types:
 5. `Shot.subject`, if it starts with `"@"`, must reference an existing `Character.id` (i.e. `subject == "@" + c.id` for some `c` in `characters[]`). A `subject` that does not start with `"@"` is not currently a defined convention in v1 — implementations should reject it (reserved for future non-character subjects).
 6. `Lyric.endMs > Lyric.startMs`.
 7. `scenes` non-empty; every `scene.shots` non-empty; `characters` may be empty; `metadata.aspectRatios` non-empty.
+8. `Shot.source.chain_from`, if present, must reference an existing `Shot.id` elsewhere in the document (same global id space as rule 3 — any scene, not just the same one). Self-reference (`chain_from == id` of the shot it's set on) is rejected as a special case of "must reference an existing shot" that can never be meaningful.
 
 ## Fixtures (`spec/fixtures/`)
 

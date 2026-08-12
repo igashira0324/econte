@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "chain_from references a shot id that does not exist", "fps": 24, "aspectRatios": ["9:16"] },
+  "characters": [],
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        { "id": "S01-A", "frames": [0, 124], "source": { "type": "generate", "approved": false, "material": "chain", "chain_from": "S99-Z" } }
+      ]
+    }
+  ]
+}

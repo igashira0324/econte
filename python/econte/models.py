@@ -112,6 +112,10 @@ class Source(BaseModel):
     # so downstream consumers can rely on it always being present.
     approved: bool = False
     material: SourceMaterial | None = None
+    # Shot id this one continues from when material == "chain". Referential
+    # integrity (must reference an existing Shot.id, not itself) is a
+    # document-level concern checked in Storyboard._validate_document_rules.
+    chain_from: str | None = None
 
 
 class Render(BaseModel):
@@ -213,6 +217,8 @@ class Storyboard(BaseModel):
         6. Lyric.endMs > Lyric.startMs.
         (Non-empty array constraints -- rule 7 -- are enforced via Field
         constraints on the individual models above.)
+        8. Shot.source.chain_from, if present, must reference an existing
+           Shot.id elsewhere in the document (not itself).
         """
         errors: list[str] = []
 
@@ -261,6 +267,21 @@ class Storyboard(BaseModel):
                     errors.append(
                         f"{path}.lyric: endMs ({shot.lyric.endMs}) must be greater than "
                         f"startMs ({shot.lyric.startMs})"
+                    )
+
+        # Rule 8: chain_from referential integrity (needs the full shot-id
+        # set from the loop above, so it's a second pass).
+        for scene_index, scene in enumerate(self.scenes):
+            for shot_index, shot in enumerate(scene.shots):
+                chain_from = shot.source.chain_from if shot.source is not None else None
+                if chain_from is None:
+                    continue
+                path = f"scenes[{scene_index}].shots[{shot_index}]"
+                if chain_from == shot.id:
+                    errors.append(f"{path}.source.chain_from: cannot reference itself")
+                elif chain_from not in seen_shot_ids:
+                    errors.append(
+                        f"{path}.source.chain_from: references unknown shot id {chain_from!r}"
                     )
 
         if errors:

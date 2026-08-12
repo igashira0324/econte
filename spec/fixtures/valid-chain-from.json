@@ -1,0 +1,14 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "chain_from referencing an earlier shot", "fps": 24, "aspectRatios": ["9:16"] },
+  "characters": [],
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        { "id": "S01-A", "frames": [0, 124], "source": { "type": "generate", "approved": true, "material": "chain_start" } },
+        { "id": "S01-B", "frames": [124, 226], "source": { "type": "generate", "approved": false, "material": "chain", "chain_from": "S01-A" } }
+      ]
+    }
+  ]
+}

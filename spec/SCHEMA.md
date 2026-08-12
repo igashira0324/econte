@@ -103,6 +103,7 @@ regardless of host OS.
 | `prompt` | string | no | the generation prompt |
 | `approved` | boolean | yes | defaults to `false` when omitted on input; implementations always emit it explicitly on output |
 | `material` | enum | no | `chain` \| `chain_start` \| `standalone` |
+| `chain_from` | string | no | when `material == "chain"`, the `id` of the shot this one continues from (referential integrity enforced, see rule 8) |
 
 ### `Render`
 
@@ -135,6 +136,7 @@ Schema cannot express cross-field constraints:
 5. `Shot.subject`, if it starts with `"@"`, must reference an existing `Character.id`. A `subject` that does not start with `"@"` is rejected (reserved for future non-character subjects).
 6. `Lyric.endMs > Lyric.startMs`.
 7. `scenes` non-empty; every `scene.shots` non-empty; `characters` may be empty; `metadata.aspectRatios` non-empty.
+8. `Shot.source.chain_from`, if present, must reference an existing `Shot.id` elsewhere in the document (not itself).
 
 ## Files in this directory
 
