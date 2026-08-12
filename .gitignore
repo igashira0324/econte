@@ -1,0 +1,36 @@
+# Node
+node_modules/
+packages/*/dist/
+packages/*/*.tsbuildinfo
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Generated artifacts (regenerate from source; keep repo lean)
+spec/econte.schema.json.tmp
+
+# Runtime output (users' own generated media never belongs in the repo)
+*.mp4
+*.mov
+!examples/**/*.md
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local dev config (per-machine paths, ComfyUI server addresses, etc.)
+*.local.toml
+*.local.yaml
+.env
