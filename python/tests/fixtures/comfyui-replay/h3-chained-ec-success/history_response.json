@@ -1,0 +1,33 @@
+{
+  "b1e6a4d2-3c7f-4a9b-8e1d-6f2a9c4b7e3d": {
+    "outputs": {
+      "15": {
+        "videos": [
+          {
+            "filename": "S02-B_00001_.mp4",
+            "subfolder": "MVdemo",
+            "type": "output"
+          }
+        ]
+      },
+      "16": {
+        "latents": [
+          {
+            "filename": "chain_00002_.latent",
+            "subfolder": "S02-chain",
+            "type": "output"
+          }
+        ]
+      }
+    },
+    "status": {
+      "status_str": "success",
+      "completed": true,
+      "messages": [
+        ["execution_start", {"prompt_id": "b1e6a4d2-3c7f-4a9b-8e1d-6f2a9c4b7e3d"}],
+        ["execution_cached", {"nodes": ["1", "2", "3", "4"], "prompt_id": "b1e6a4d2-3c7f-4a9b-8e1d-6f2a9c4b7e3d"}],
+        ["execution_success", {"prompt_id": "b1e6a4d2-3c7f-4a9b-8e1d-6f2a9c4b7e3d"}]
+      ]
+    }
+  }
+}

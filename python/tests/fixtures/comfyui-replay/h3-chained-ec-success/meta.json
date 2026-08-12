@@ -1,0 +1,5 @@
+{
+  "profile": "minimax-h3-motion-context",
+  "variant": "chained_ec",
+  "description": "Successful chained clip continuing S02-A's chain (chain_from_index resolves to job 1), EasyCache on; SaveVideo (node 15) produces the trimmed MP4 and node 16 writes the next chain latent."
+}

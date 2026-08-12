@@ -1,0 +1,5 @@
+{
+  "profile": "qwen-image-edit-2511",
+  "variant": "with_ref",
+  "description": "Successful keyframe job with a reference image; SaveImage (node 12) produces one PNG."
+}

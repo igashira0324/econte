@@ -1,0 +1,5 @@
+{
+  "profile": "minimax-h3-motion-context",
+  "variant": "origin_ec",
+  "description": "Successful chain-start video clip, EasyCache on; SaveVideo (node 15) produces one MP4 and MiniMaxH3MotionContextSaveLatent (node 16) writes the chain's origin latent."
+}

@@ -1,0 +1,32 @@
+{
+  "e2a9c7f1-4d3b-4e8a-9c6d-1f7b2a4e9c5d": {
+    "outputs": {},
+    "status": {
+      "status_str": "error",
+      "completed": false,
+      "messages": [
+        ["execution_start", {"prompt_id": "e2a9c7f1-4d3b-4e8a-9c6d-1f7b2a4e9c5d"}],
+        ["execution_cached", {"nodes": [], "prompt_id": "e2a9c7f1-4d3b-4e8a-9c6d-1f7b2a4e9c5d"}],
+        [
+          "execution_error",
+          {
+            "prompt_id": "e2a9c7f1-4d3b-4e8a-9c6d-1f7b2a4e9c5d",
+            "node_id": "11",
+            "node_type": "SamplerCustomAdvanced",
+            "executed": ["1", "2", "3", "4", "4b", "5", "6", "7", "8", "9", "10"],
+            "exception_message": "Allocation on device 0 would exceed allowed memory. (out of memory)\nCurrently allocated : 10.87 GiB\nRequested             : 1.21 GiB\nGPU 0 has a total capacity of 12.00 GiB of which 612.00 MiB is free. Of the allocated memory 10.02 GiB is allocated by PyTorch, and 412.31 MiB is reserved by PyTorch but unallocated.",
+            "exception_type": "torch.cuda.OutOfMemoryError",
+            "traceback": [
+              "  File \"execution.py\", line 349, in execute\n    output_data, output_ui, has_subgraph = get_output_data(obj, input_data_all, execution_block_cb=execution_block_cb, pre_execute_cb=pre_execute_cb)",
+              "  File \"comfy_extras/nodes_custom_sampler.py\", line 612, in sample\n    samples = guider.sample(noise.generate_noise(latent), latent_image, sampler, sigmas, denoise_mask=noise_mask, callback=callback, disable_pbar=disable_pbar, seed=noise.seed)",
+              "  File \"comfy/samplers.py\", line 1005, in sample\n    output = self.inner_sample(noise, latent_image, device, sampler, sigmas, denoise_mask, callback, disable_pbar, seed)",
+              "torch.cuda.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.21 GiB (GPU 0; 12.00 GiB total capacity)"
+            ],
+            "current_inputs": {},
+            "current_outputs": {}
+          }
+        ]
+      ]
+    }
+  }
+}

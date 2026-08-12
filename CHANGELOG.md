@@ -17,18 +17,29 @@ version field in each release's schema for the exact contract in force.
 - `packages/econte` (`@econte/schema`) — TypeScript/Zod schema and validator;
   source of truth for the schema. Generates `spec/econte.schema.json`
   (JSON Schema 2020-12) via `npm run build:schema`.
-- `python/econte` — pydantic v2 mirror of the schema, plus the beginnings of
-  the `econte` CLI (`econte validate <path>` only so far — `compile`, `run`,
-  `ingest`, and `sheet` are planned, not yet implemented).
+- `python/econte` — pydantic v2 mirror of the schema, plus the `econte` CLI.
+- `docs/profile-spec.md` — the authoritative specification for backend
+  profiles (`profiles/*.yaml`) and the generic runner that executes them.
+- `profiles/qwen-image-edit-2511.yaml` and
+  `profiles/minimax-h3-motion-context.yaml` — two hand-verified reference
+  backend profiles (keyframe generation, and chained video clip generation
+  with 4 graph variants), ported from real hardware-verified harness scripts.
+- `python/econte/runners/` — the generic engine that loads and executes any
+  profile shaped like the two references above: profile/manifest schemas,
+  `${token}` placeholder substitution, variant selection, dry-run cost
+  estimation, a minimal ComfyUI HTTP client, and the submit/poll/report
+  orchestration loop (including `on_job_failure: abort_remaining_chain`
+  propagation for chained-video profiles). Wired up as `econte run
+  <manifest.json> [--dry-run] [--only ID ...] [--host/--port] [--output-dir]
+  [--timeout]`.
+- `python/tests/fixtures/comfyui-replay/` — recorded ComfyUI HTTP
+  request/response fixtures used to test the runner's submit/poll/report
+  control flow without a GPU or a live ComfyUI server.
 - `scripts/cross_check_goldens.py` — validates every golden fixture against
   both implementations and asserts they agree with each other and with the
   filename-implied expectation.
 
 ### Planned (not yet implemented)
-- `python/econte/runners/` — manifest-driven ComfyUI runners for keyframe and
-  video-clip generation.
-- `profiles/` — backend profile format for connecting arbitrary local ComfyUI
-  workflows to the storyboard pipeline.
 - `econte compile` / `econte ingest` / `econte sheet` CLI subcommands.
 - `examples/haruka/` — an original, rights-clean sample character and an
   8-shot storyboard demonstrating the full pipeline end to end.

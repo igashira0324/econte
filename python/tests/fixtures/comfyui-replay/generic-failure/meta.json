@@ -1,0 +1,5 @@
+{
+  "profile": "minimax-h3-motion-context",
+  "variant": "origin_ec",
+  "description": "Failed chain-start job: CUDA out-of-memory raised inside SamplerCustomAdvanced (node 11) during sampling. Intended for exercising both generic error-handling and `on_job_failure: abort_remaining_chain` propagation to any later job whose chain_from (transitively) points at this one."
+}

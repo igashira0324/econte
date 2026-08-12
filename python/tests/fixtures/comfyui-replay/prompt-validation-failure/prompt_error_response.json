@@ -1,0 +1,32 @@
+{
+  "error": {
+    "type": "prompt_outputs_failed_validation",
+    "message": "Prompt outputs failed validation",
+    "details": "",
+    "extra_info": {}
+  },
+  "node_errors": {
+    "1": {
+      "errors": [
+        {
+          "type": "value_not_in_list",
+          "message": "Value not in list",
+          "details": "unet_name: 'qwen/qwen_image_edit_2511_fp8mixed.safetensors' not in ['Krea2\\\\krea2_turbo_fp8_scaled.safetensors', 'qwen\\\\qwen_image_edit_2511_fp8mixed.safetensors']",
+          "extra_info": {
+            "input_name": "unet_name",
+            "input_config": [
+              [
+                "Krea2\\\\krea2_turbo_fp8_scaled.safetensors",
+                "qwen\\\\qwen_image_edit_2511_fp8mixed.safetensors"
+              ],
+              {}
+            ],
+            "received_value": "qwen/qwen_image_edit_2511_fp8mixed.safetensors"
+          }
+        }
+      ],
+      "dependent_outputs": ["12"],
+      "class_type": "UNETLoader"
+    }
+  }
+}

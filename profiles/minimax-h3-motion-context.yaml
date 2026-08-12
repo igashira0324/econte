@@ -1,0 +1,358 @@
+# MiniMax H3 + Motion Context — chained video clip generation.
+#
+# Ported from a hand-written harness (h3_chain_runner.py), verified across
+# multiple productions (a 40-slot two-orientation MV, a 21-slot chain,
+# resolution ablations) on an RTX 3060 12GB. Key facts this profile encodes:
+#
+#   - Resolution must be a multiple of 32 in BOTH dimensions. A multiple of
+#     16 is NOT enough — it only fails on the *second* chained clip (latent
+#     2x2 patchify reshape error), so a single passing clip proves nothing.
+#   - A chained clip trims 22 pinned frames (0.917s) off the join: an origin
+#     clip is 124 frames / 5.167s, a chained clip is 102 frames / 4.25s.
+#   - EasyCache speeds up generation ~1.57x but destroys hands/limbs during
+#     FAST motion (verified same-seed A/B). Use the `_fast` variants (EC
+#     off, ~1.8x slower) for fast-action shots; the `_ec` variants for calm
+#     ones.
+#   - Framing/composition is locked at each chain's origin clip and cannot
+#     be changed by later prompts in the same chain — this is a generation
+#     limitation, not something this profile can work around; econte's
+#     answer is to let a storyboard mix multiple chains + standalone shots
+#     (see `Shot.source.material` in docs/schema-spec.md) rather than one
+#     long chain, which is exactly what `material`/`chain_from` here exist
+#     to express at the runner level.
+#   - `MiniMaxH3MotionContextLoadLatent` resolves `clip_index` by globbing
+#     an entire `latent_path` folder for the newest match — it is NOT
+#     scoped by filename. Two chains sharing a `latent_folder` with
+#     overlapping indices can silently load the wrong chain's latent. Give
+#     each chain its own `latent_folder` (a manifest.defaults or per-job
+#     field consumed as `${latent_folder}` below — this profile doesn't
+#     enforce uniqueness itself, a future `econte compile` check should).
+#
+# Model filenames are the author's ComfyUI-relative paths (`MiniMaxH3/`
+# subfolder, symlinked to a separate models drive) — adjust for your setup.
+
+id: minimax-h3-motion-context
+kind: video
+on_job_failure: abort_remaining_chain
+
+defaults:
+  steps: 20
+  fast: false
+  material: chain_start
+
+description: >
+  MiniMax H3 Ref2V + Motion Context clip chaining. Verified ~13.5 min/clip
+  at 640x1152 (EasyCache on), 1.8x with EasyCache off for fast motion.
+  A chain's identity/framing is fixed at its origin clip; use `material:
+  chain_start` or `standalone` to begin a new chain (different framing, or
+  a character-free B-roll insert) and `material: chain` + `chain_from:
+  <earlier job id>` to continue one.
+
+server:
+  default_host: "127.0.0.1"
+  default_port: 8189
+
+constraints:
+  resolution_multiple: 32
+
+cost:
+  reference_resolution: { width: 640, height: 1152 }
+  base_seconds_per_job: 810
+  first_job_overhead_seconds: 0
+  multipliers:
+    fast: 1.8
+
+output:
+  glob: "${filename_prefix}_*.mp4"
+  pick: newest
+
+variant_selector:
+  fields: [material, fast]
+  map:
+    - when: { material: chain, fast: false }
+      variant: chained_ec
+    - when: { material: chain, fast: true }
+      variant: chained_fast
+    - when: { material: [chain_start, standalone], fast: false }
+      variant: origin_ec
+    - when: { material: [chain_start, standalone], fast: true }
+      variant: origin_fast
+    - when: {}
+      variant: origin_ec
+
+variants:
+  origin_ec:
+    graph:
+      "1":
+        class_type: CLIPLoader
+        inputs: { clip_name: "MiniMaxH3\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors", type: minimax, device: default }
+      "2":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_video_vae_fp16.safetensors" }
+      "3":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_audio_vae_fp32.safetensors" }
+      "4":
+        class_type: UNETLoader
+        inputs: { unet_name: "MiniMaxH3\\minimax_h3_ref2va_pruned_int8_convrot.safetensors", weight_dtype: default }
+      "4b":
+        class_type: EasyCache
+        inputs: { model: ["4", 0], reuse_threshold: 0.3, start_percent: 0.2, end_percent: 0.9, verbose: false }
+      "5":
+        class_type: LoadImage
+        inputs: { image: "${ref_image}" }
+      "6":
+        class_type: MiniMaxH3ReferenceToVideo
+        inputs:
+          clip: ["1", 0]
+          vae: ["2", 0]
+          audio_vae: ["3", 0]
+          prompt: "${prompt}"
+          width: "${width}"
+          height: "${height}"
+          length: 124
+          ref_image_size: match
+          "ref_images.ref_image_0": ["5", 0]
+      "7":
+        class_type: BasicGuider
+        inputs: { model: ["4b", 0], conditioning: ["6", 0] }
+      "8":
+        class_type: KSamplerSelect
+        inputs: { sampler_name: res_multistep }
+      "9":
+        class_type: BasicScheduler
+        inputs: { model: ["4b", 0], scheduler: simple, steps: "${steps}", denoise: 1.0 }
+      "10":
+        class_type: RandomNoise
+        inputs: { noise_seed: "${seed}" }
+      "11":
+        class_type: SamplerCustomAdvanced
+        inputs: { noise: ["10", 0], guider: ["7", 0], sampler: ["8", 0], sigmas: ["9", 0], latent_image: ["6", 1] }
+      "12":
+        class_type: VAEDecode
+        inputs: { samples: ["11", 0], vae: ["2", 0] }
+      "13":
+        class_type: VAEDecodeAudio
+        inputs: { samples: ["11", 0], vae: ["3", 0] }
+      "14":
+        class_type: CreateVideo
+        inputs: { images: ["12", 0], audio: ["13", 0], fps: 24.0 }
+      "15":
+        class_type: SaveVideo
+        inputs: { video: ["14", 0], filename_prefix: "${filename_prefix}", format: auto, codec: auto }
+      "16":
+        class_type: MiniMaxH3MotionContextSaveLatent
+        inputs: { latent: ["11", 0], filename_prefix: "${latent_folder}/chain", clip_index: "${job_index}" }
+
+  origin_fast:
+    graph:
+      "1":
+        class_type: CLIPLoader
+        inputs: { clip_name: "MiniMaxH3\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors", type: minimax, device: default }
+      "2":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_video_vae_fp16.safetensors" }
+      "3":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_audio_vae_fp32.safetensors" }
+      "4":
+        class_type: UNETLoader
+        inputs: { unet_name: "MiniMaxH3\\minimax_h3_ref2va_pruned_int8_convrot.safetensors", weight_dtype: default }
+      "5":
+        class_type: LoadImage
+        inputs: { image: "${ref_image}" }
+      "6":
+        class_type: MiniMaxH3ReferenceToVideo
+        inputs:
+          clip: ["1", 0]
+          vae: ["2", 0]
+          audio_vae: ["3", 0]
+          prompt: "${prompt}"
+          width: "${width}"
+          height: "${height}"
+          length: 124
+          ref_image_size: match
+          "ref_images.ref_image_0": ["5", 0]
+      "7":
+        class_type: BasicGuider
+        inputs: { model: ["4", 0], conditioning: ["6", 0] }
+      "8":
+        class_type: KSamplerSelect
+        inputs: { sampler_name: res_multistep }
+      "9":
+        class_type: BasicScheduler
+        inputs: { model: ["4", 0], scheduler: simple, steps: "${steps}", denoise: 1.0 }
+      "10":
+        class_type: RandomNoise
+        inputs: { noise_seed: "${seed}" }
+      "11":
+        class_type: SamplerCustomAdvanced
+        inputs: { noise: ["10", 0], guider: ["7", 0], sampler: ["8", 0], sigmas: ["9", 0], latent_image: ["6", 1] }
+      "12":
+        class_type: VAEDecode
+        inputs: { samples: ["11", 0], vae: ["2", 0] }
+      "13":
+        class_type: VAEDecodeAudio
+        inputs: { samples: ["11", 0], vae: ["3", 0] }
+      "14":
+        class_type: CreateVideo
+        inputs: { images: ["12", 0], audio: ["13", 0], fps: 24.0 }
+      "15":
+        class_type: SaveVideo
+        inputs: { video: ["14", 0], filename_prefix: "${filename_prefix}", format: auto, codec: auto }
+      "16":
+        class_type: MiniMaxH3MotionContextSaveLatent
+        inputs: { latent: ["11", 0], filename_prefix: "${latent_folder}/chain", clip_index: "${job_index}" }
+
+  chained_ec:
+    graph:
+      "1":
+        class_type: CLIPLoader
+        inputs: { clip_name: "MiniMaxH3\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors", type: minimax, device: default }
+      "2":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_video_vae_fp16.safetensors" }
+      "3":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_audio_vae_fp32.safetensors" }
+      "4":
+        class_type: UNETLoader
+        inputs: { unet_name: "MiniMaxH3\\minimax_h3_ref2va_pruned_int8_convrot.safetensors", weight_dtype: default }
+      "4b":
+        class_type: EasyCache
+        inputs: { model: ["4", 0], reuse_threshold: 0.3, start_percent: 0.2, end_percent: 0.9, verbose: false }
+      "5":
+        class_type: LoadImage
+        inputs: { image: "${ref_image}" }
+      "6":
+        class_type: MiniMaxH3ReferenceToVideo
+        inputs:
+          clip: ["1", 0]
+          vae: ["2", 0]
+          audio_vae: ["3", 0]
+          prompt: "${prompt}"
+          width: "${width}"
+          height: "${height}"
+          length: 124
+          ref_image_size: match
+          "ref_images.ref_image_0": ["5", 0]
+      "20":
+        class_type: MiniMaxH3MotionContextLoadLatent
+        inputs: { latent_path: "${latent_folder}", clip_index: "${chain_from_index}" }
+      "21":
+        class_type: MiniMaxH3MotionContext
+        inputs:
+          conditioning: ["6", 0]
+          vae: ["2", 0]
+          latent: ["6", 1]
+          context_length: "22"
+          audio_context_length: 22
+          context_latent: ["20", 0]
+      "7":
+        class_type: BasicGuider
+        inputs: { model: ["4b", 0], conditioning: ["21", 0] }
+      "8":
+        class_type: KSamplerSelect
+        inputs: { sampler_name: res_multistep }
+      "9":
+        class_type: BasicScheduler
+        inputs: { model: ["4b", 0], scheduler: simple, steps: "${steps}", denoise: 1.0 }
+      "10":
+        class_type: RandomNoise
+        inputs: { noise_seed: "${seed}" }
+      "11":
+        class_type: SamplerCustomAdvanced
+        inputs: { noise: ["10", 0], guider: ["7", 0], sampler: ["8", 0], sigmas: ["9", 0], latent_image: ["6", 1] }
+      "12":
+        class_type: VAEDecode
+        inputs: { samples: ["11", 0], vae: ["2", 0] }
+      "13":
+        class_type: VAEDecodeAudio
+        inputs: { samples: ["11", 0], vae: ["3", 0] }
+      "22":
+        class_type: MiniMaxH3MotionContextTrim
+        inputs: { images: ["12", 0], trim_frames: ["21", 1], audio: ["13", 0], fps: 24.0, match_tail: true }
+      "14":
+        class_type: CreateVideo
+        inputs: { images: ["22", 0], audio: ["22", 1], fps: 24.0 }
+      "15":
+        class_type: SaveVideo
+        inputs: { video: ["14", 0], filename_prefix: "${filename_prefix}", format: auto, codec: auto }
+      "16":
+        class_type: MiniMaxH3MotionContextSaveLatent
+        inputs: { latent: ["11", 0], filename_prefix: "${latent_folder}/chain", clip_index: "${job_index}" }
+
+  chained_fast:
+    graph:
+      "1":
+        class_type: CLIPLoader
+        inputs: { clip_name: "MiniMaxH3\\qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors", type: minimax, device: default }
+      "2":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_video_vae_fp16.safetensors" }
+      "3":
+        class_type: VAELoader
+        inputs: { vae_name: "MiniMaxH3\\minimax_h3_audio_vae_fp32.safetensors" }
+      "4":
+        class_type: UNETLoader
+        inputs: { unet_name: "MiniMaxH3\\minimax_h3_ref2va_pruned_int8_convrot.safetensors", weight_dtype: default }
+      "5":
+        class_type: LoadImage
+        inputs: { image: "${ref_image}" }
+      "6":
+        class_type: MiniMaxH3ReferenceToVideo
+        inputs:
+          clip: ["1", 0]
+          vae: ["2", 0]
+          audio_vae: ["3", 0]
+          prompt: "${prompt}"
+          width: "${width}"
+          height: "${height}"
+          length: 124
+          ref_image_size: match
+          "ref_images.ref_image_0": ["5", 0]
+      "20":
+        class_type: MiniMaxH3MotionContextLoadLatent
+        inputs: { latent_path: "${latent_folder}", clip_index: "${chain_from_index}" }
+      "21":
+        class_type: MiniMaxH3MotionContext
+        inputs:
+          conditioning: ["6", 0]
+          vae: ["2", 0]
+          latent: ["6", 1]
+          context_length: "22"
+          audio_context_length: 22
+          context_latent: ["20", 0]
+      "7":
+        class_type: BasicGuider
+        inputs: { model: ["4", 0], conditioning: ["21", 0] }
+      "8":
+        class_type: KSamplerSelect
+        inputs: { sampler_name: res_multistep }
+      "9":
+        class_type: BasicScheduler
+        inputs: { model: ["4", 0], scheduler: simple, steps: "${steps}", denoise: 1.0 }
+      "10":
+        class_type: RandomNoise
+        inputs: { noise_seed: "${seed}" }
+      "11":
+        class_type: SamplerCustomAdvanced
+        inputs: { noise: ["10", 0], guider: ["7", 0], sampler: ["8", 0], sigmas: ["9", 0], latent_image: ["6", 1] }
+      "12":
+        class_type: VAEDecode
+        inputs: { samples: ["11", 0], vae: ["2", 0] }
+      "13":
+        class_type: VAEDecodeAudio
+        inputs: { samples: ["11", 0], vae: ["3", 0] }
+      "22":
+        class_type: MiniMaxH3MotionContextTrim
+        inputs: { images: ["12", 0], trim_frames: ["21", 1], audio: ["13", 0], fps: 24.0, match_tail: true }
+      "14":
+        class_type: CreateVideo
+        inputs: { images: ["22", 0], audio: ["22", 1], fps: 24.0 }
+      "15":
+        class_type: SaveVideo
+        inputs: { video: ["14", 0], filename_prefix: "${filename_prefix}", format: auto, codec: auto }
+      "16":
+        class_type: MiniMaxH3MotionContextSaveLatent
+        inputs: { latent: ["11", 0], filename_prefix: "${latent_folder}/chain", clip_index: "${job_index}" }

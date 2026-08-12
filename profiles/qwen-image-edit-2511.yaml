@@ -1,0 +1,203 @@
+# Qwen-Image-Edit 2511 (FP8) + Lightning 4-step LoRA — keyframe generation.
+#
+# Ported from a hand-written harness (keyframe_runner.py) verified 2026-08-13
+# on an RTX 3060 12GB: ~40s/frame at 720x1280, ~4min one-time model load,
+# peak VRAM 11.8GB. Character identity held across full-body / chest-up /
+# face-ECU / back-view / top-down / different-location shots from a single
+# reference image; character-free B-roll works via a prompt convention (see
+# docs/why.md and the storyboard.json `Shot.idea` field) rather than any
+# graph difference — this profile has no B-roll-specific variant, `prompt`
+# alone carries that intent.
+#
+# Model filenames below are the ComfyUI-relative paths this profile was
+# verified against on the author's machine (a `qwen/` subfolder under
+# models/diffusion_models, models/text_encoders, models/vae, models/loras).
+# Adjust to match your own ComfyUI model layout — see docs/profile-spec.md
+# and profiles/README.md for how to write your own profile instead.
+#
+# NOTE: ComfyUI's /prompt endpoint matches model filenames against its
+# object_info model lists using the exact separator your OS/ComfyUI
+# reports (backslash on Windows) — a forward-slash path that *looks*
+# equivalent can 400 with "value_not_in_list". If you hit that, check
+# what separator `GET /object_info/UNETLoader` reports for `unet_name`.
+
+id: qwen-image-edit-2511
+kind: keyframe
+defaults: {}
+
+description: >
+  Qwen-Image-Edit 2511 FP8 + Lightning 4-step LoRA, single reference image
+  per job (or none, for character-free B-roll). Verified ~40s/frame at
+  720x1280 on a 12GB GPU.
+
+server:
+  default_host: "127.0.0.1"
+  default_port: 8188
+
+constraints:
+  resolution_multiple: 8
+  max_megapixels: 1.5
+
+cost:
+  reference_resolution: { width: 720, height: 1280 }
+  base_seconds_per_job: 40
+  first_job_overhead_seconds: 240
+  multipliers: {}
+
+output:
+  glob: "${filename_prefix}_*.png"
+  pick: newest
+
+variant_selector:
+  fields: [ref_image]
+  map:
+    - when: { ref_image: null }
+      variant: no_ref
+    - when: {}
+      variant: with_ref
+
+variants:
+  with_ref:
+    graph:
+      "1":
+        class_type: UNETLoader
+        inputs:
+          unet_name: "qwen\\qwen_image_edit_2511_fp8mixed.safetensors"
+          weight_dtype: default
+      "2":
+        class_type: CLIPLoader
+        inputs:
+          clip_name: "qwen_2.5_vl_7b_fp8_scaled.safetensors"
+          type: qwen_image
+          device: default
+      "3":
+        class_type: VAELoader
+        inputs:
+          vae_name: "qwen\\qwen_image_vae.safetensors"
+      "4":
+        class_type: LoraLoaderModelOnly
+        inputs:
+          model: ["1", 0]
+          lora_name: "qwen\\Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
+          strength_model: 1.0
+      "5":
+        class_type: ModelSamplingAuraFlow
+        inputs:
+          model: ["4", 0]
+          shift: 3.0
+      "6":
+        class_type: LoadImage
+        inputs:
+          image: "${ref_image}"
+      "7":
+        class_type: TextEncodeQwenImageEditPlus
+        inputs:
+          clip: ["2", 0]
+          vae: ["3", 0]
+          prompt: "${prompt}"
+          image1: ["6", 0]
+      "8":
+        class_type: TextEncodeQwenImageEditPlus
+        inputs:
+          clip: ["2", 0]
+          vae: ["3", 0]
+          prompt: ""
+      "9":
+        class_type: EmptySD3LatentImage
+        inputs:
+          width: "${width}"
+          height: "${height}"
+          batch_size: 1
+      "10":
+        class_type: KSampler
+        inputs:
+          model: ["5", 0]
+          positive: ["7", 0]
+          negative: ["8", 0]
+          latent_image: ["9", 0]
+          seed: "${seed}"
+          steps: 4
+          cfg: 1.0
+          sampler_name: euler
+          scheduler: simple
+          denoise: 1.0
+      "11":
+        class_type: VAEDecode
+        inputs:
+          samples: ["10", 0]
+          vae: ["3", 0]
+      "12":
+        class_type: SaveImage
+        inputs:
+          images: ["11", 0]
+          filename_prefix: "${filename_prefix}"
+
+  no_ref:
+    graph:
+      "1":
+        class_type: UNETLoader
+        inputs:
+          unet_name: "qwen\\qwen_image_edit_2511_fp8mixed.safetensors"
+          weight_dtype: default
+      "2":
+        class_type: CLIPLoader
+        inputs:
+          clip_name: "qwen_2.5_vl_7b_fp8_scaled.safetensors"
+          type: qwen_image
+          device: default
+      "3":
+        class_type: VAELoader
+        inputs:
+          vae_name: "qwen\\qwen_image_vae.safetensors"
+      "4":
+        class_type: LoraLoaderModelOnly
+        inputs:
+          model: ["1", 0]
+          lora_name: "qwen\\Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
+          strength_model: 1.0
+      "5":
+        class_type: ModelSamplingAuraFlow
+        inputs:
+          model: ["4", 0]
+          shift: 3.0
+      "7":
+        class_type: TextEncodeQwenImageEditPlus
+        inputs:
+          clip: ["2", 0]
+          vae: ["3", 0]
+          prompt: "${prompt}"
+      "8":
+        class_type: TextEncodeQwenImageEditPlus
+        inputs:
+          clip: ["2", 0]
+          vae: ["3", 0]
+          prompt: ""
+      "9":
+        class_type: EmptySD3LatentImage
+        inputs:
+          width: "${width}"
+          height: "${height}"
+          batch_size: 1
+      "10":
+        class_type: KSampler
+        inputs:
+          model: ["5", 0]
+          positive: ["7", 0]
+          negative: ["8", 0]
+          latent_image: ["9", 0]
+          seed: "${seed}"
+          steps: 4
+          cfg: 1.0
+          sampler_name: euler
+          scheduler: simple
+          denoise: 1.0
+      "11":
+        class_type: VAEDecode
+        inputs:
+          samples: ["10", 0]
+          vae: ["3", 0]
+      "12":
+        class_type: SaveImage
+        inputs:
+          images: ["11", 0]
+          filename_prefix: "${filename_prefix}"

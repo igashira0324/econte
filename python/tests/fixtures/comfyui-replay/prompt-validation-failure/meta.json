@@ -1,0 +1,5 @@
+{
+  "profile": "qwen-image-edit-2511",
+  "variant": "with_ref",
+  "description": "HTTP 400 from POST /prompt itself (no prompt_id is ever minted): unet_name used a forward-slash path ('qwen/...') but ComfyUI's object_info list for UNETLoader on this Windows install reports backslash-separated entries, so 'value_not_in_list' fires before any node executes."
+}
