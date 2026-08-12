@@ -1,0 +1,83 @@
+{
+  "version": "0.1.0",
+  "metadata": {
+    "title": "Full Example MV",
+    "artist": "haruka",
+    "audio": "audio/track.mp3",
+    "durationInSeconds": 35.5,
+    "fps": 24,
+    "aspectRatios": ["9:16", "16:9"],
+    "concept": "A quiet resolve, even after everything falls apart."
+  },
+  "characters": [
+    {
+      "id": "haruka",
+      "identity": "Silver twin-tail hair, teal jacket, small star pendant",
+      "refs": ["characters/haruka/front.png", "characters/haruka/side.png", "characters/haruka/back.png"]
+    }
+  ],
+  "globalStyle": {
+    "palette": ["#0a0e27", "#00e5ff", "#ff4081", "#f5f5f5"],
+    "grade": "teal-orange + light grain",
+    "negative": ["watermark", "text", "extra fingers"]
+  },
+  "audioAnalysis": "analysis.json",
+  "scenes": [
+    {
+      "id": "S01",
+      "section": "intro",
+      "shots": [
+        {
+          "id": "S01-A",
+          "frames": [0, 96],
+          "idea": "Empty establishing shot before the character appears",
+          "subject": null,
+          "action": "Wind moves through an empty rooftop at dawn",
+          "camera": { "framing": "EWS", "movement": "slow push-in 1.00->1.06" },
+          "heroMotion": "no character",
+          "audioSync": "pad swell on intro",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S01-A.png",
+            "seed": 1001,
+            "prompt": "empty rooftop at dawn, wide establishing shot, no people",
+            "approved": true,
+            "material": "standalone"
+          },
+          "render": {
+            "file": "clips/S01-A.mp4",
+            "actualSeconds": 4.0,
+            "renderedAt": "2026-08-13T07:01:00Z"
+          },
+          "lyric": null
+        },
+        {
+          "id": "S01-B",
+          "frames": [96, 220],
+          "idea": "Introduce haruka, small against the wide space",
+          "subject": "@haruka",
+          "action": "She stands alone at the rooftop edge, looking at the horizon",
+          "camera": { "framing": "WS", "movement": "hold" },
+          "heroMotion": "hair moves in the wind",
+          "audioSync": "vocal entry on downbeat",
+          "source": {
+            "type": "generate",
+            "backend": "minimax-h3-motion-context",
+            "keyframe": "keyframes/S01-B.png",
+            "seed": 1002,
+            "prompt": "the character from Picture 1, full body wide shot, standing at a rooftop edge at dawn",
+            "approved": false,
+            "material": "chain_start"
+          },
+          "lyric": {
+            "text": "I'm still here",
+            "startMs": 4100,
+            "endMs": 5300,
+            "animation": "fade-up"
+          }
+        }
+      ]
+    }
+  ]
+}

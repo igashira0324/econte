@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "frames end must be > start", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "scenes": [
+    { "id": "S01", "shots": [{ "id": "S01-A", "frames": [100, 50] }] }
+  ]
+}

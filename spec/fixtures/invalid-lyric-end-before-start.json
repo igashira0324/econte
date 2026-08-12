@@ -1,0 +1,17 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "lyric endMs must be > startMs", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        {
+          "id": "S01-A",
+          "frames": [0, 100],
+          "lyric": { "text": "hi", "startMs": 5000, "endMs": 4000 }
+        }
+      ]
+    }
+  ]
+}

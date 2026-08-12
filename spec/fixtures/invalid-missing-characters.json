@@ -1,0 +1,19 @@
+{
+  "version": "0.1.0",
+  "metadata": {
+    "title": "characters key omitted entirely",
+    "fps": 24,
+    "aspectRatios": ["16:9"]
+  },
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        {
+          "id": "S01-A",
+          "frames": [0, 120]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "palette entries must be 6-digit hex colors", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "globalStyle": { "palette": ["blue", "#fff"] },
+  "scenes": [
+    { "id": "S01", "shots": [{ "id": "S01-A", "frames": [0, 100] }] }
+  ]
+}

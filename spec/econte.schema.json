@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/igashira0324/econte/spec/econte.schema.json",
+  "title": "econte storyboard schema",
+  "description": "Structural (per-field) JSON Schema for the econte storyboard format, generated from packages/econte (Zod). Cross-field rules (id uniqueness, referential integrity, frames/lyric ordering — see docs/schema-spec.md) are enforced by the reference implementations (packages/econte, python/econte), not by this file alone.",
+  "$ref": "#/$defs/Storyboard",
+  "$defs": {
+    "Storyboard": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "artist": {
+              "type": "string"
+            },
+            "audio": {
+              "type": "string"
+            },
+            "durationInSeconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "fps": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "aspectRatios": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^\\d+:\\d+$"
+              },
+              "minItems": 1
+            },
+            "concept": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "fps",
+            "aspectRatios"
+          ],
+          "additionalProperties": false
+        },
+        "characters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*$"
+              },
+              "identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "refs": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "id",
+              "identity",
+              "refs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "globalStyle": {
+          "type": "object",
+          "properties": {
+            "palette": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^#[0-9a-fA-F]{6}$"
+              }
+            },
+            "grade": {
+              "type": "string"
+            },
+            "negative": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "audioAnalysis": {
+          "type": "string"
+        },
+        "scenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "section": {
+                "type": "string"
+              },
+              "shots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]+$"
+                    },
+                    "frames": {
+                      "type": "array",
+                      "minItems": 2,
+                      "maxItems": 2,
+                      "items": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      ]
+                    },
+                    "idea": {
+                      "type": "string"
+                    },
+                    "subject": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "pattern": "^@.+$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "action": {
+                      "type": "string"
+                    },
+                    "camera": {
+                      "type": "object",
+                      "properties": {
+                        "framing": {
+                          "type": "string",
+                          "enum": [
+                            "ECU",
+                            "CU",
+                            "MCU",
+                            "MS",
+                            "MLS",
+                            "WS",
+                            "EWS",
+                            "OTS",
+                            "POV",
+                            "2S",
+                            "INS",
+                            "FS",
+                            "BEV"
+                          ]
+                        },
+                        "movement": {
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "heroMotion": {
+                      "type": "string"
+                    },
+                    "audioSync": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "type": "object",
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "generate",
+                            "asset",
+                            "remotion"
+                          ]
+                        },
+                        "backend": {
+                          "type": "string"
+                        },
+                        "keyframe": {
+                          "type": "string"
+                        },
+                        "seed": {
+                          "type": "integer"
+                        },
+                        "prompt": {
+                          "type": "string"
+                        },
+                        "approved": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "material": {
+                          "type": "string",
+                          "enum": [
+                            "chain",
+                            "chain_start",
+                            "standalone"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "render": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string"
+                        },
+                        "actualSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "renderedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "lyric": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "startMs": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "endMs": {
+                              "type": "integer"
+                            },
+                            "animation": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "text",
+                            "startMs",
+                            "endMs"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "frames"
+                  ],
+                  "additionalProperties": false
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "id",
+              "shots"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        }
+      },
+      "required": [
+        "version",
+        "metadata",
+        "characters",
+        "scenes"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

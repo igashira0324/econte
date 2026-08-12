@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "Duplicate character id", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [
+    { "id": "haruka", "identity": "a", "refs": ["a.png"] },
+    { "id": "haruka", "identity": "b", "refs": ["b.png"] }
+  ],
+  "scenes": [
+    { "id": "S01", "shots": [{ "id": "S01-A", "frames": [0, 100] }] }
+  ]
+}

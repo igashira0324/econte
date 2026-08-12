@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "metadata": {
+    "title": "Render.renderedAt is not an ISO 8601 datetime",
+    "fps": 24,
+    "aspectRatios": ["16:9"]
+  },
+  "characters": [],
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        {
+          "id": "S01-A",
+          "frames": [0, 120],
+          "render": {
+            "renderedAt": "not-a-real-datetime"
+          }
+        }
+      ]
+    }
+  ]
+}

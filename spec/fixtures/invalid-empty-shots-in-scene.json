@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "each scene's shots must be non-empty", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "scenes": [
+    { "id": "S01", "shots": [] }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "Duplicate shot id across scenes", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "scenes": [
+    { "id": "S01", "shots": [{ "id": "SHOT-A", "frames": [0, 100] }] },
+    { "id": "S02", "shots": [{ "id": "SHOT-A", "frames": [100, 200] }] }
+  ]
+}

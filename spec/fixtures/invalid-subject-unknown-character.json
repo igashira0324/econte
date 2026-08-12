@@ -1,0 +1,10 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "subject references undeclared character", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [
+    { "id": "haruka", "identity": "a", "refs": ["a.png"] }
+  ],
+  "scenes": [
+    { "id": "S01", "shots": [{ "id": "S01-A", "frames": [0, 100], "subject": "@nobody" }] }
+  ]
+}

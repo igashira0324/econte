@@ -1,0 +1,8 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "aspectRatios entries must match ^\\d+:\\d+$", "fps": 24, "aspectRatios": ["widescreen"] },
+  "characters": [],
+  "scenes": [
+    { "id": "S01", "shots": [{ "id": "S01-A", "frames": [0, 100] }] }
+  ]
+}
