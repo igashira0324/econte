@@ -52,6 +52,7 @@ version field in each release's schema for the exact contract in force.
   `econte sheet` to decode and resize keyframe thumbnails for the
   self-contained HTML approval sheet.
 
-### Planned (not yet implemented)
-- `examples/haruka/` — an original, rights-clean sample character and an
-  8-shot storyboard demonstrating the full pipeline end to end.
+- `examples/haruka/` — a complete runnable example: an original CC0 character
+  with a three-view reference sheet, an 8-shot vertical storyboard exercising
+  B-roll / chain / chain_from / lyric / multi-backend staging, and the
+  keyframes generated from it by econte's own CLI.

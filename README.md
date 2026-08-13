@@ -28,7 +28,7 @@ is a response to.
 | [`packages/econte`](packages/econte/) | TypeScript/Zod schema + validator — the source of truth |
 | [`python/econte`](python/econte/) | pydantic mirror + CLI: `validate`, `compile`, `run`, `ingest`, `sheet` |
 | [`profiles/`](profiles/) | Backend profiles — data files that connect an econte manifest to *your* ComfyUI workflow (any model, not just the ones we've tested) |
-| `examples/haruka/` | **Planned, not yet in the repo** — an original, rights-clean sample character and 8-shot storyboard, generated end to end. See `CHANGELOG.md` |
+| [`examples/haruka/`](examples/haruka/) | A complete runnable example — original CC0 character, 8-shot storyboard, and the keyframes econte generated from it |
 
 ## The pipeline
 

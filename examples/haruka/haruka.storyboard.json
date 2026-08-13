@@ -1,0 +1,266 @@
+{
+  "version": "0.1.0",
+  "metadata": {
+    "title": "haruka sample",
+    "artist": "econte examples",
+    "fps": 24,
+    "aspectRatios": [
+      "9:16"
+    ],
+    "concept": "Someone deciding to leave, in the quiet minute before anyone notices."
+  },
+  "characters": [
+    {
+      "id": "haruka",
+      "identity": "silver ponytail, calm grey eyes, teal field jacket over a white shirt, brass star pendant",
+      "refs": [
+        "characters/haruka/front.jpg",
+        "characters/haruka/side.jpg",
+        "characters/haruka/back.jpg"
+      ]
+    }
+  ],
+  "globalStyle": {
+    "palette": [
+      "#12161f",
+      "#4fd1c5",
+      "#f6ad55",
+      "#e8eaf0"
+    ],
+    "grade": "cool shadows, warm practical lights, light grain",
+    "negative": [
+      "watermark",
+      "text",
+      "extra fingers",
+      "deformed hands",
+      "multiple characters"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "S01",
+      "section": "intro",
+      "shots": [
+        {
+          "id": "S01-A",
+          "frames": [
+            0,
+            96
+          ],
+          "idea": "Open on the place, not the person — establish the empty room she is about to leave",
+          "action": "Late afternoon light moves slowly across an empty apartment",
+          "camera": {
+            "framing": "EWS",
+            "movement": "slow push-in 1.00->1.05"
+          },
+          "heroMotion": "dust drifting in a shaft of light",
+          "audioSync": "fade in on the first pad chord",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S01-A.jpg",
+            "prompt": "An empty small apartment in late afternoon, warm orange light through a west-facing window, a packed travel bag by the door, dust drifting in the light, no people, no characters, empty room, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "standalone"
+          }
+        },
+        {
+          "id": "S01-B",
+          "frames": [
+            96,
+            220
+          ],
+          "idea": "Introduce her small against the space — she has already decided",
+          "subject": "@haruka",
+          "action": "She stands in the doorway looking back into the room one last time",
+          "camera": {
+            "framing": "WS",
+            "movement": "hold"
+          },
+          "heroMotion": "she shifts the bag strap on her shoulder",
+          "audioSync": "cut in on the first downbeat",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S01-B.jpg",
+            "prompt": "The exact same character from Picture 1, same silver ponytail, same teal field jacket, full body wide shot, standing in an apartment doorway with a travel bag over her shoulder, looking back into the warm empty room behind her, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "chain_start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "section": "verse",
+      "shots": [
+        {
+          "id": "S02-A",
+          "frames": [
+            220,
+            344
+          ],
+          "idea": "Closer — let the face carry the doubt the wide shot could not",
+          "subject": "@haruka",
+          "action": "She looks down at the key in her hand, then closes her fist around it",
+          "camera": {
+            "framing": "MCU",
+            "movement": "hold"
+          },
+          "heroMotion": "her hand closes around the key",
+          "audioSync": "vocal enters",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S02-A.jpg",
+            "prompt": "The exact same character from Picture 1, same face, same silver ponytail and teal jacket, chest-up medium close-up, looking down at a brass key held in her open hand, warm side light, soft focus background, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "chain_start"
+          },
+          "lyric": {
+            "text": "I already know the way out",
+            "startMs": 9200,
+            "endMs": 12400,
+            "animation": "fade-up"
+          }
+        },
+        {
+          "id": "S02-B",
+          "frames": [
+            344,
+            446
+          ],
+          "idea": "The detail shot that says goodbye without her face — cut away before it gets sentimental",
+          "action": "The key is left on the kitchen counter, catching the last of the light",
+          "camera": {
+            "framing": "INS",
+            "movement": "slow slide left to right"
+          },
+          "heroMotion": "the key settles on the counter",
+          "audioSync": "on the kick, end of the line",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S02-B.jpg",
+            "prompt": "Macro insert shot of a single brass key resting on a pale kitchen counter, warm late afternoon light raking across the surface, shallow depth of field, no people, no characters, object close-up only, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "standalone"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "section": "chorus",
+      "shots": [
+        {
+          "id": "S03-A",
+          "frames": [
+            446,
+            570
+          ],
+          "idea": "Outside, and the scale of the world opens up — new chain, new framing",
+          "subject": "@haruka",
+          "action": "She walks out into a wide street at dusk, city lights coming on ahead of her",
+          "camera": {
+            "framing": "WS",
+            "movement": "hold"
+          },
+          "heroMotion": "she walks away from camera",
+          "audioSync": "chorus downbeat",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S03-A.jpg",
+            "prompt": "The exact same character from Picture 1, same silver ponytail and teal field jacket, seen from behind, full body wide shot, walking away down a wide city street at dusk with a travel bag over her shoulder, warm street lights coming on ahead of her, cool blue sky above, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "chain_start"
+          },
+          "lyric": {
+            "text": "so I take it",
+            "startMs": 18600,
+            "endMs": 20800,
+            "animation": "cut-in"
+          }
+        },
+        {
+          "id": "S03-B",
+          "frames": [
+            570,
+            672
+          ],
+          "idea": "Continuation of the same take — the walk keeps going, motion carries across the cut",
+          "subject": "@haruka",
+          "action": "She keeps walking, the street widening around her",
+          "camera": {
+            "framing": "WS",
+            "movement": "hold"
+          },
+          "heroMotion": "steady walk, jacket moving in the wind",
+          "audioSync": "second bar of the chorus",
+          "source": {
+            "type": "generate",
+            "backend": "minimax-h3-motion-context",
+            "prompt": "She keeps walking away down the dusk street, steady pace, city lights brightening ahead",
+            "approved": false,
+            "material": "chain",
+            "chain_from": "S03-A"
+          }
+        },
+        {
+          "id": "S03-C",
+          "frames": [
+            672,
+            796
+          ],
+          "idea": "One last look back at the camera — the only time she faces us",
+          "subject": "@haruka",
+          "action": "She glances back over her shoulder, almost smiling, then turns away",
+          "camera": {
+            "framing": "MCU",
+            "movement": "hold"
+          },
+          "heroMotion": "she turns her head back, then away again",
+          "audioSync": "on the last vocal note",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S03-C.jpg",
+            "prompt": "The exact same character from Picture 1, same face, same silver ponytail and teal jacket, chest-up medium close-up, glancing back over her shoulder toward the camera with a faint almost-smile, warm street lights behind her at dusk, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "chain_start"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S04",
+      "section": "outro",
+      "shots": [
+        {
+          "id": "S04-A",
+          "frames": [
+            796,
+            940
+          ],
+          "idea": "End on the world without her in it — mirrors the opening shot",
+          "action": "The empty street holds for a moment after she has gone",
+          "camera": {
+            "framing": "EWS",
+            "movement": "hold"
+          },
+          "heroMotion": "traffic lights change in the distance",
+          "audioSync": "let the last chord ring out, fade to black",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "keyframe": "keyframes/S04-A.jpg",
+            "prompt": "A wide empty city street at night, warm street lights and a distant traffic light, wet asphalt reflecting the lights, no people, no characters, empty scene, clean modern anime illustration style, vertical composition",
+            "approved": false,
+            "material": "standalone"
+          }
+        }
+      ]
+    }
+  ]
+}

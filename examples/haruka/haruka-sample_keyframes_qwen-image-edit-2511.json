@@ -1,0 +1,56 @@
+{
+  "profile": "qwen-image-edit-2511",
+  "output_prefix": "haruka-sample_keyframes_qwen-image-edit-2511",
+  "defaults": {
+    "width": 864,
+    "height": 1536
+  },
+  "jobs": [
+    {
+      "id": "S01-A",
+      "seed": 523305069,
+      "prompt": "An empty small apartment in late afternoon, warm orange light through a west-facing window, a packed travel bag by the door, dust drifting in the light, no people, no characters, empty room, clean modern anime illustration style, vertical composition",
+      "material": "standalone"
+    },
+    {
+      "id": "S01-B",
+      "seed": 322329590,
+      "prompt": "The exact same character from Picture 1, same silver ponytail, same teal field jacket, full body wide shot, standing in an apartment doorway with a travel bag over her shoulder, looking back into the warm empty room behind her, clean modern anime illustration style, vertical composition",
+      "material": "chain_start",
+      "ref_image": "characters/haruka/front.png"
+    },
+    {
+      "id": "S02-A",
+      "seed": 1343041177,
+      "prompt": "The exact same character from Picture 1, same face, same silver ponytail and teal jacket, chest-up medium close-up, looking down at a brass key held in her open hand, warm side light, soft focus background, clean modern anime illustration style, vertical composition",
+      "material": "chain_start",
+      "ref_image": "characters/haruka/front.png"
+    },
+    {
+      "id": "S02-B",
+      "seed": 273270252,
+      "prompt": "Macro insert shot of a single brass key resting on a pale kitchen counter, warm late afternoon light raking across the surface, shallow depth of field, no people, no characters, object close-up only, clean modern anime illustration style, vertical composition",
+      "material": "standalone"
+    },
+    {
+      "id": "S03-A",
+      "seed": 1456295890,
+      "prompt": "The exact same character from Picture 1, same silver ponytail and teal field jacket, seen from behind, full body wide shot, walking away down a wide city street at dusk with a travel bag over her shoulder, warm street lights coming on ahead of her, cool blue sky above, clean modern anime illustration style, vertical composition",
+      "material": "chain_start",
+      "ref_image": "characters/haruka/front.png"
+    },
+    {
+      "id": "S03-C",
+      "seed": 1388298770,
+      "prompt": "The exact same character from Picture 1, same face, same silver ponytail and teal jacket, chest-up medium close-up, glancing back over her shoulder toward the camera with a faint almost-smile, warm street lights behind her at dusk, clean modern anime illustration style, vertical composition",
+      "material": "chain_start",
+      "ref_image": "characters/haruka/front.png"
+    },
+    {
+      "id": "S04-A",
+      "seed": 1173383230,
+      "prompt": "A wide empty city street at night, warm street lights and a distant traffic light, wet asphalt reflecting the lights, no people, no characters, empty scene, clean modern anime illustration style, vertical composition",
+      "material": "standalone"
+    }
+  ]
+}

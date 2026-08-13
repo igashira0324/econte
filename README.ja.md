@@ -24,7 +24,7 @@ econte は、ストーリーボード（絵コンテ）をAI動画制作の真�
 | [`packages/econte`](packages/econte/) | TypeScript/Zod スキーマ + バリデータ (真実源) |
 | [`python/econte`](python/econte/) | pydantic 鏡像 + CLI: `validate` / `compile` / `run` / `ingest` / `sheet` |
 | [`profiles/`](profiles/) | バックエンドプロファイル。econte のマニフェストを**自分の**ComfyUIワークフローに接続するデータ定義(特定モデル専用ではない) |
-| `examples/haruka/` | **計画中・未実装** — 権利的にクリーンなオリジナルキャラによる、8ショットのストーリーボード実例。`CHANGELOG.md`参照 |
+| [`examples/haruka/`](examples/haruka/) | 実際に動かせる完全な実例 — CC0のオリジナルキャラ、8ショットのストーリーボード、econte自身が生成したキーフレーム |
 
 ## パイプライン
 
