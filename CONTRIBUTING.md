@@ -45,6 +45,18 @@ so CI does not require a GPU or a running ComfyUI server. If you change a
 runner's request shape, re-record fixtures against a real server and note
 which ComfyUI version you used in the PR.
 
+**Running `scripts/cross_check_goldens.py` locally**: it shells out to
+`packages/econte/scripts/validate-cli.mjs`, which imports the *compiled*
+`packages/econte/dist/`, not `src/` directly — run `npm run build` (or
+`build:schema`) in `packages/econte` first, or you'll get a confusing
+`ERR_MODULE_NOT_FOUND` and every `valid-*.json` fixture will spuriously
+report as TypeScript-rejecting it. (This bit CI itself once — the
+`cross-language-consistency` job's `npm install` step doesn't imply a
+build; a passing local run against an already-built `dist/` from earlier
+`npm test`/`npm run build:schema` invocations can mask this on a machine
+that never starts from a truly clean checkout. CI's job now runs
+`npm run build` explicitly before the cross-check step for this reason.)
+
 ## Reporting issues
 
 Open a GitHub issue. For schema questions, include the smallest

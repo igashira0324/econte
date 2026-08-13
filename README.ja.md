@@ -24,7 +24,7 @@ econte は、ストーリーボード（絵コンテ）をAI動画制作の真�
 | [`packages/econte`](packages/econte/) | TypeScript/Zod スキーマ + バリデータ (真実源) |
 | [`python/econte`](python/econte/) | pydantic 鏡像 + CLI: `validate` / `compile` / `run` / `ingest` / `sheet` |
 | [`profiles/`](profiles/) | バックエンドプロファイル。econte のマニフェストを**自分の**ComfyUIワークフローに接続するデータ定義(特定モデル専用ではない) |
-| [`examples/haruka/`](examples/haruka/) | 権利的にクリーンなオリジナルキャラによる、8ショットのストーリーボード実例 |
+| `examples/haruka/` | **計画中・未実装** — 権利的にクリーンなオリジナルキャラによる、8ショットのストーリーボード実例。`CHANGELOG.md`参照 |
 
 ## パイプライン
 
@@ -45,8 +45,14 @@ storyboard.json (キャラ・ショット・カメラ・歌詞/ビート同期�
        │
        │ econte ingest
        ▼
-storyboard.json を実ファイルパス・実尺で更新
+storyboard.json を実ファイルパスで更新 (実尺は書き込まない、下記参照)
 ```
+
+`econte ingest` は測定済みの実尺を意図的に書き込みません。納品書の時間情報は
+「生成にかかった時間」であって「メディアの実尺」とは別物で、混同すると誤った
+秒数がそのまま書き込まれてしまいます。実尺の測定(ffprobe等)は別の後段ツールの
+役割として切り出しています — 詳細は `docs/compile-spec.md` の
+「Scope boundary」節を参照。
 
 特定モデルへの依存はありません。`profiles/` がComfyUIグラフとマニフェストの
 フィールド対応を記述する仕組みで、Qwen-Image-Edit(キーフレーム)とMiniMax H3 Motion

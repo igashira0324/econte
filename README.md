@@ -28,7 +28,7 @@ is a response to.
 | [`packages/econte`](packages/econte/) | TypeScript/Zod schema + validator — the source of truth |
 | [`python/econte`](python/econte/) | pydantic mirror + CLI: `validate`, `compile`, `run`, `ingest`, `sheet` |
 | [`profiles/`](profiles/) | Backend profiles — data files that connect an econte manifest to *your* ComfyUI workflow (any model, not just the ones we've tested) |
-| [`examples/haruka/`](examples/haruka/) | An original, rights-clean sample character and 8-shot storyboard, generated end to end |
+| `examples/haruka/` | **Planned, not yet in the repo** — an original, rights-clean sample character and 8-shot storyboard, generated end to end. See `CHANGELOG.md` |
 
 ## The pipeline
 
@@ -49,8 +49,15 @@ clips manifest  →  econte run  →  video clips (your local model)
        │
        │  econte ingest
        ▼
-storyboard.json, updated with real file paths + actual rendered duration
+storyboard.json, updated with real file paths (not durations — see below)
 ```
+
+`econte ingest` deliberately never writes a measured clip duration: the
+delivery report's timing is *generation* time, not media duration, and
+conflating the two would silently write a wrong number. Measuring the
+real duration of a generated file (e.g. via ffprobe) is left to a
+separate, later tool — see `docs/compile-spec.md`'s "Scope boundary"
+section for the reasoning.
 
 Nothing here assumes a specific model. `profiles/` describes the ComfyUI
 graph and how manifest fields map onto its node inputs; two reference
