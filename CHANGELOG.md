@@ -38,8 +38,20 @@ version field in each release's schema for the exact contract in force.
 - `scripts/cross_check_goldens.py` — validates every golden fixture against
   both implementations and asserts they agree with each other and with the
   filename-implied expectation.
+- `docs/compile-spec.md` — the authoritative specification for the
+  `econte compile` / `econte ingest` / `econte sheet` CLI subcommands that
+  close the loop between `storyboard.json`, manifests, and delivery reports.
+- `python/econte/converters/` (`compile.py`, `ingest.py`, `sheet.py`) and
+  their CLI wiring in `python/econte/cli.py` — `econte compile
+  <storyboard.json> --target keyframes|clips [--width/--height]
+  [--profile-dir] [--output-dir]`, `econte ingest <storyboard.json>
+  <report.json> --target keyframes|clips [--output] [--comfyui-output-dir]`,
+  and `econte sheet <storyboard.json> [--output] [--thumb-width]` — plus
+  `python/tests/test_converters/` covering all three.
+- `pillow` — new runtime dependency of `python/econte`, used by
+  `econte sheet` to decode and resize keyframe thumbnails for the
+  self-contained HTML approval sheet.
 
 ### Planned (not yet implemented)
-- `econte compile` / `econte ingest` / `econte sheet` CLI subcommands.
 - `examples/haruka/` — an original, rights-clean sample character and an
   8-shot storyboard demonstrating the full pipeline end to end.

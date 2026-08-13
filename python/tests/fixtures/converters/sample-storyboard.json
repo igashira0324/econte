@@ -1,0 +1,127 @@
+{
+  "version": "0.1.0",
+  "metadata": {
+    "title": "Fixture Storyboard",
+    "artist": "test-artist",
+    "fps": 24,
+    "aspectRatios": ["9:16", "16:9"],
+    "concept": "A short test storyboard for econte's compile/ingest test suite."
+  },
+  "characters": [
+    {
+      "id": "haruka",
+      "identity": "Silver twin-tail hair, teal jacket, small star pendant",
+      "refs": ["characters/haruka/front.png", "characters/haruka/side.png"]
+    }
+  ],
+  "scenes": [
+    {
+      "id": "S01",
+      "section": "intro",
+      "shots": [
+        {
+          "id": "S01-A",
+          "frames": [0, 96],
+          "idea": "Empty establishing shot before the character appears",
+          "subject": null,
+          "action": "Wind moves through an empty rooftop at dawn",
+          "camera": { "framing": "EWS", "movement": "slow push-in 1.00->1.06" },
+          "audioSync": "pad swell on intro",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "prompt": "empty rooftop at dawn, wide establishing shot, no people",
+            "approved": true,
+            "material": "standalone"
+          }
+        },
+        {
+          "id": "S01-B",
+          "frames": [96, 220],
+          "idea": "Introduce haruka, small against the wide space",
+          "subject": "@haruka",
+          "action": "She stands alone at the rooftop edge, looking at the horizon",
+          "camera": { "framing": "WS", "movement": "hold" },
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "prompt": "the character from Picture 1, full body wide shot, standing at a rooftop edge at dawn",
+            "approved": false,
+            "material": "chain_start"
+          }
+        },
+        {
+          "id": "S01-C",
+          "frames": [220, 300],
+          "idea": "Closer look; backend not assigned yet",
+          "subject": "@haruka",
+          "action": "She turns toward the skyline",
+          "source": {
+            "type": "generate",
+            "prompt": "the character from Picture 1, medium shot, turning toward the skyline",
+            "approved": false,
+            "material": "chain",
+            "chain_from": "S01-B"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S02",
+      "section": "chorus",
+      "shots": [
+        {
+          "id": "S02-A",
+          "frames": [300, 396],
+          "idea": "Wide cutaway; prompt not written yet",
+          "subject": null,
+          "action": "City lights blur past",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "approved": true,
+            "material": "standalone"
+          }
+        },
+        {
+          "id": "S02-B",
+          "frames": [396, 520],
+          "idea": "haruka reappears, continuing the earlier chain across scenes",
+          "subject": "@haruka",
+          "action": "She looks back over her shoulder",
+          "source": {
+            "type": "generate",
+            "backend": "qwen-image-edit-2511",
+            "prompt": "the character from Picture 1, medium close shot, looking back over her shoulder",
+            "approved": true,
+            "material": "chain",
+            "chain_from": "S01-B"
+          }
+        }
+      ]
+    },
+    {
+      "id": "S03",
+      "section": "outro",
+      "shots": [
+        {
+          "id": "S03-A",
+          "frames": [520, 600],
+          "idea": "Pre-existing drone footage dropped in as-is",
+          "source": { "type": "asset", "approved": true }
+        },
+        {
+          "id": "S03-B",
+          "frames": [600, 650],
+          "idea": "Editor-built title card",
+          "source": { "type": "remotion", "approved": true }
+        },
+        {
+          "id": "S03-C",
+          "frames": [650, 700],
+          "idea": "Placeholder shot, no generation plan yet"
+        }
+      ]
+    }
+  ]
+}
