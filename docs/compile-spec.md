@@ -81,6 +81,7 @@ same charset as `Scene.id`/`Shot.id`, lowercased, spaces to `-`).
 | `fast` | not currently a `Shot.source` field | **not set by compile in v1** — a profile's own `defaults.fast` (or manifest-level `defaults.fast` set by hand after compiling) applies. A future schema addition could add a `Shot.source.fast` if this proves to matter enough; not adding it speculatively now |
 | `ref_image` | **differs by target, see below** | |
 | `width` / `height` | the compile invocation's `--width`/`--height` | placed in the manifest's `defaults`, not per-job (uniform across one compile pass) |
+| `latent_folder` (defaults only, `--target clips` only) | derived, `<storyboard-slug>_clips_<backend>_latents` | chain-capable video profiles (e.g. `minimax-h3-motion-context`) reference `${latent_folder}` in their graph templates to scope where per-chain latents save/load; deterministic per (storyboard, backend) so repeated compiles agree. Omitted for `--target keyframes` (no shipped keyframe profile uses it) |
 
 **`ref_image` resolution — the important, target-dependent part:**
 

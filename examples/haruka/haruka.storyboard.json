@@ -173,7 +173,7 @@
             "backend": "qwen-image-edit-2511",
             "keyframe": "keyframes/S03-A.jpg",
             "prompt": "The exact same character from Picture 1, same silver ponytail and teal field jacket, seen from behind, full body wide shot, walking away down a wide city street at dusk with a travel bag over her shoulder, warm street lights coming on ahead of her, cool blue sky above, clean modern anime illustration style, vertical composition",
-            "approved": false,
+            "approved": true,
             "material": "chain_start"
           },
           "lyric": {
@@ -189,9 +189,9 @@
             570,
             672
           ],
-          "idea": "Continuation of the same take — the walk keeps going, motion carries across the cut",
+          "idea": "The approved still starts moving — this is where the video pipeline picks up from the stills-first pass",
           "subject": "@haruka",
-          "action": "She keeps walking, the street widening around her",
+          "action": "She walks steadily away down the street, jacket and ponytail moving in the wind",
           "camera": {
             "framing": "WS",
             "movement": "hold"
@@ -201,17 +201,41 @@
           "source": {
             "type": "generate",
             "backend": "minimax-h3-motion-context",
-            "prompt": "She keeps walking away down the dusk street, steady pace, city lights brightening ahead",
-            "approved": false,
+            "keyframe": "keyframes/S03-A.jpg",
+            "prompt": "The character from Picture 1, walking steadily away down a wide city street at dusk, seen from behind, travel bag over her shoulder, ponytail and jacket moving gently in the wind, street lights growing brighter ahead of her",
+            "approved": true,
+            "material": "chain_start"
+          }
+        },
+        {
+          "id": "S03-D",
+          "frames": [
+            672,
+            774
+          ],
+          "idea": "The chain continues — same take, motion carries across the cut with no visible seam",
+          "subject": "@haruka",
+          "action": "She keeps walking at the same pace, more of the city opening up ahead",
+          "camera": {
+            "framing": "WS",
+            "movement": "hold"
+          },
+          "heroMotion": "steady walk continues, more lights ahead",
+          "audioSync": "third bar of the chorus",
+          "source": {
+            "type": "generate",
+            "backend": "minimax-h3-motion-context",
+            "prompt": "She keeps walking at the same steady pace down the dusk street, more city lights visible ahead, a light breeze picking up",
+            "approved": true,
             "material": "chain",
-            "chain_from": "S03-A"
+            "chain_from": "S03-B"
           }
         },
         {
           "id": "S03-C",
           "frames": [
-            672,
-            796
+            774,
+            898
           ],
           "idea": "One last look back at the camera — the only time she faces us",
           "subject": "@haruka",
@@ -240,8 +264,8 @@
         {
           "id": "S04-A",
           "frames": [
-            796,
-            940
+            898,
+            1042
           ],
           "idea": "End on the world without her in it — mirrors the opening shot",
           "action": "The empty street holds for a moment after she has gone",

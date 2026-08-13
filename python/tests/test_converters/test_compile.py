@@ -514,6 +514,7 @@ def test_compile_groups_eligible_shots_by_backend_with_width_height_in_defaults(
     assert group.backend == "qwen-image-edit-2511"
     assert isinstance(group.manifest, Manifest)
     assert group.manifest.profile == "qwen-image-edit-2511"
+    # keyframes-target: no latent_folder -- no shipped keyframe profile uses it.
     assert group.manifest.defaults == {"width": 720, "height": 1280}
     assert {j.id for j in group.manifest.jobs} == {"S01-A", "S01-B", "S02-B"}
     # width/height must NOT be set per-job -- only in manifest.defaults.
@@ -521,6 +522,53 @@ def test_compile_groups_eligible_shots_by_backend_with_width_height_in_defaults(
         dumped = job.model_dump()
         assert "width" not in dumped
         assert "height" not in dumped
+
+
+def test_compile_clips_manifest_defaults_include_a_latent_folder() -> None:
+    # Regression test: a clips-target manifest against a chain-capable video
+    # profile (minimax-h3-motion-context) with NO latent_folder in
+    # manifest.defaults fails outright at `econte run` time -- the profile's
+    # chained_ec/chained_fast variants reference `${latent_folder}` in their
+    # graph templates (MiniMaxH3MotionContextSaveLatent/LoadLatent) and
+    # compile_storyboard never populated it before this test existed, so
+    # EVERY clips-target compile against that profile was broken. Caught by
+    # manually running the full pipeline end to end against a live server,
+    # not by any prior unit test.
+    storyboard = make_storyboard(
+        characters=[
+            {"id": "haruka", "identity": "test character", "refs": ["characters/haruka/front.png"]}
+        ],
+        shots=[
+            shot_dict(
+                "S01-A",
+                subject="@haruka",
+                source={
+                    "type": "generate",
+                    "backend": "minimax-h3-motion-context",
+                    "prompt": "haruka walking",
+                    "approved": True,
+                    "material": "chain_start",
+                },
+            )
+        ],
+    )
+    # 576x1024, not 640x1152: gcd(640, 1152) = 128 -> 5:9, not 9:16 (the
+    # exact "non-issue" a prior audit pass flagged) -- 576x1024 is the actual
+    # exact-9:16-and-multiple-of-32 resolution, matching make_storyboard's
+    # default aspectRatios ["9:16"] and the H3 profile's resolution_multiple.
+    result = compile_storyboard(
+        storyboard, target="clips", profile_dir=PROFILES_DIR, width=576, height=1024
+    )
+    defaults = result.groups[0].manifest.defaults
+    assert defaults["width"] == 576
+    assert defaults["height"] == 1024
+    assert "latent_folder" in defaults
+    assert isinstance(defaults["latent_folder"], str) and defaults["latent_folder"]
+    # Stable/deterministic per (storyboard, backend) -- not random per compile.
+    result2 = compile_storyboard(
+        storyboard, target="clips", profile_dir=PROFILES_DIR, width=576, height=1024
+    )
+    assert result2.groups[0].manifest.defaults["latent_folder"] == defaults["latent_folder"]
 
 
 # --- CLI integration -----------------------------------------------------------

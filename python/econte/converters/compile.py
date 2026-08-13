@@ -162,6 +162,31 @@ def _derive_seed(shot_id: str) -> int:
     return int(hashlib.sha256(shot_id.encode()).hexdigest()[:8], 16) % (2**31)
 
 
+def _manifest_defaults(
+    slug: str, target: CompileTarget, backend: str, width: int, height: int
+) -> dict[str, Any]:
+    """Build a compiled manifest group's ``defaults`` dict.
+
+    ``width``/``height`` are always set. For ``target == "clips"`` a
+    ``latent_folder`` default is also derived, one per (storyboard, backend)
+    group -- profiles for chain-capable video backends (e.g.
+    ``minimax-h3-motion-context``) reference ``${latent_folder}`` in their
+    graph templates (see ``profiles/README.md`` and that profile's own
+    comments) to scope where per-chain latents are saved/loaded, and
+    ``docs/compile-spec.md``'s field-mapping table never populated it --
+    every clips-target compile against such a profile failed outright with
+    an unresolved-token error before this existed. Not needed for
+    ``target == "keyframes"`` (no keyframe profile currently uses it), but
+    harmless to omit there rather than guess a profile that might want it
+    later; profiles that don't reference the token simply ignore an unused
+    manifest default.
+    """
+    defaults: dict[str, Any] = {"width": width, "height": height}
+    if target == "clips":
+        defaults["latent_folder"] = f"{slug}_{target}_{backend}_latents"
+    return defaults
+
+
 def _character_ref_image(shot: Shot, characters_by_id: dict[str, Character]) -> str | None:
     """``characters[subject_id].refs[0]`` if ``shot.subject`` is set, else
     ``None``. Shared by both targets' ``ref_image`` resolution (see
@@ -337,7 +362,7 @@ def compile_storyboard(
             manifest=Manifest(
                 profile=backend,
                 output_prefix=f"{slug}_{target}_{backend}",
-                defaults={"width": width, "height": height},
+                defaults=_manifest_defaults(slug, target, backend, width, height),
                 jobs=jobs,
             ),
             warnings=notices_by_backend.get(backend, []),
