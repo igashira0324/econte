@@ -110,10 +110,12 @@ server:
 constraints:                      # validated by the runner before submitting ANY job (dry-run and real run)
   resolution_multiple: 8          # width and height must both be divisible by this
   max_megapixels: 1.5             # warning (not error) above this — matches Qwen-Image's ~1MP sweet spot
+  max_frames: 124                 # ERROR (not warning) above this — video profiles only; see below
 
 cost:                             # dry-run time estimate; all figures are measured, not guessed —
                                    # see the profile's own description/comments for the source measurement
   reference_resolution: { width: 720, height: 1280 }
+  reference_frames: 124           # optional; omit for image profiles, which have no frame axis
   base_seconds_per_job: 40
   first_job_overhead_seconds: 240 # one-time model load, added once regardless of job count
   multipliers: {}                 # e.g. `fast: 1.8` — see minimax-h3-motion-context.yaml for a profile that uses this
@@ -185,6 +187,35 @@ time (both `--dry-run` and real runs), before any network call:
 
 - `resolution_multiple`: error if `width % n != 0 or height % n != 0`.
 - `max_megapixels`: warning (not error) if `width * height` exceeds it.
+- `max_frames`: **error** if the job's resolved `frames` exceeds it, and an
+  error if `frames` does not resolve to a number at all. Only meaningful
+  for video profiles; omit it entirely for image profiles.
+
+#### Why `max_frames` is an error while `max_megapixels` is only a warning
+
+Not an inconsistency — the two axes fail differently, and this one is
+recorded from a measured incident rather than assumed.
+
+Resolution degrades gracefully: exceed a profile's sweet spot and you get
+a slower, possibly worse-looking job, but the linear-in-area cost estimate
+below stays roughly honest, so a warning is the right call and the user
+keeps the freedom to try.
+
+Frame count does not. A video DiT's attention cost is superlinear in
+sequence length, and a large DiT that fit in VRAM at the reference frame
+count can stop fitting past it and begin re-streaming its weights every
+step. Both compound. On the reference RTX 3060 12GB, `minimax-h3-motion-
+context` measures ~70 s/step at its 124-frame budget, and **>5400 s/step
+at 339 frames** — roughly 77x slower for 2.7x the frames. Worse, a profile
+that feeds a *reference video* packs it into the same attention sequence
+as the generated clip, so asking for a longer clip lengthens the sequence
+twice over.
+
+At that point the estimate below is not merely imprecise, it is wrong by
+orders of magnitude. Quoting a number the runner knows it cannot stand
+behind is worse than refusing the job, so it refuses. The answer to "I
+want a longer shot" is more clips, not longer ones — which is what
+`material: chain` / `chain_from` exist for.
 
 ### Cost estimate (`--dry-run`)
 
@@ -193,8 +224,18 @@ total_seconds = first_job_overhead_seconds
               + sum over jobs of:
                   base_seconds_per_job
                   * (job.width * job.height) / (reference_resolution.width * reference_resolution.height)
+                  * (job.frames / reference_frames)     # omitted when reference_frames is unset
                   * product(multipliers[f] for f in multipliers if job.get(f) is truthy)
 ```
+
+`reference_frames` is optional. Leave it unset (the default) for image
+profiles and the frame term disappears entirely, leaving the formula
+exactly as it was. Setting it opts a profile into frame-proportional
+scaling *and* makes a resolved numeric `frames` mandatory for every job —
+the same treatment `width`/`height` already get, on the same reasoning: a
+silently unscaled estimate is worse than a refused one. A profile that
+sets `reference_frames` will normally also set `constraints.max_frames`,
+since the linear frame term is only trustworthy near the measured point.
 
 The dry-run report prints this total (and a per-job breakdown) without
 making any network call — this must work with no ComfyUI server running,

@@ -100,6 +100,42 @@ def dry_run(profile: Profile, manifest: Manifest) -> DryRunReport:
                     )
                 )
 
+            frame_budget = profile.constraints.max_frames
+            if frame_budget is not None:
+                frames = context.get("frames")
+                if not isinstance(frames, (int, float)) or isinstance(frames, bool):
+                    issues.append(
+                        ConstraintIssue(
+                            job_id=job.id,
+                            field="frames",
+                            severity="error",
+                            message=(
+                                f"this profile sets max_frames={frame_budget}, so a resolved "
+                                f"numeric 'frames' is required (got frames={frames!r}); set it "
+                                "on the job, manifest.defaults, or profile.defaults"
+                            ),
+                        )
+                    )
+                elif frames > frame_budget:
+                    # An error, not a warning like max_megapixels: a video DiT's
+                    # attention cost is superlinear in frame count, so overshooting
+                    # this budget does not degrade gracefully -- it leaves the
+                    # envelope the profile's cost figures were measured in, and the
+                    # linear estimate in cost.py stops being meaningful.
+                    issues.append(
+                        ConstraintIssue(
+                            job_id=job.id,
+                            field="max_frames",
+                            severity="error",
+                            message=(
+                                f"{int(frames)} frames exceeds max_frames={frame_budget}, the "
+                                "largest clip this profile's cost figures were measured at; "
+                                "past it the dry-run estimate is unreliable. Split the shot "
+                                "into more, shorter clips instead."
+                            ),
+                        )
+                    )
+
             mp_limit = profile.constraints.max_megapixels
             if mp_limit is not None:
                 megapixels = (width * height) / 1_000_000

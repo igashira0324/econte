@@ -8,6 +8,35 @@ version field in each release's schema for the exact contract in force.
 
 ## [Unreleased]
 
+### Added
+- `constraints.max_frames` — a per-profile frame budget, checked against each
+  job's resolved `frames` before any network call. Unlike `max_megapixels`
+  (a warning), exceeding it is an **error**: a video DiT's attention cost is
+  superlinear in sequence length, and a large DiT that fit in VRAM at the
+  reference frame count can stop fitting past it and re-stream its weights
+  every step. Measured on the reference RTX 3060 12GB with
+  `minimax-h3-motion-context`: ~70 s/step at 124 frames, **>5400 s/step at
+  339 frames** — roughly 77x slower for 2.7x the frames. Past that point the
+  cost estimate is not merely imprecise but wrong by orders of magnitude, so
+  the runner refuses the job rather than quote a number it cannot stand
+  behind. `docs/profile-spec.md` explains the reasoning next to the field.
+- `cost.reference_frames` — optional; opts a profile into frame-proportional
+  cost scaling. Unset (the default) leaves the estimate formula exactly as it
+  was, so image profiles are unaffected. Setting it also makes a resolved
+  numeric `frames` mandatory for every job — the same treatment
+  `width`/`height` already get.
+
+### Changed
+- `profiles/minimax-h3-motion-context.yaml`: clip length is now the `frames`
+  context field (`profile.defaults.frames: 124`, consumed as `${frames}`)
+  instead of a `length: 124` literal repeated across all four graph variants.
+  It was previously a magic number invisible to both the constraint checker
+  and the cost model, so editing it bypassed every guard econte has. The
+  profile now also declares `max_frames: 124` and `reference_frames: 124`.
+  Existing manifests are unaffected: `frames` resolves from
+  `profile.defaults`, and at 124 frames the new cost term is exactly 1.0, so
+  every previously-reported estimate is unchanged.
+
 ## [0.1.0] - 2026-08-13
 
 The first release: a working schema, a generic ComfyUI runner driven by

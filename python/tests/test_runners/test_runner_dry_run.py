@@ -43,6 +43,42 @@ def test_dry_run_max_megapixels_is_warning_not_error() -> None:
     assert not any(i.field == "max_megapixels" and i.severity == "error" for i in report.issues)
 
 
+def test_dry_run_max_frames_is_error_not_warning() -> None:
+    # Deliberately the opposite severity to max_megapixels above: exceeding a
+    # frame budget invalidates the linear cost estimate rather than merely
+    # straining it, so the runner refuses instead of quoting a bad number.
+    # See docs/profile-spec.md, "Why max_frames is an error".
+    profile = _synthetic_profile(constraints={"max_frames": 124})
+    manifest = make_manifest(defaults={"width": 100, "height": 100, "frames": 339})
+    report = dry_run(profile, manifest)
+    assert report.has_errors
+    assert any(i.field == "max_frames" and i.severity == "error" for i in report.issues)
+
+
+def test_dry_run_max_frames_passes_at_exactly_the_budget() -> None:
+    profile = _synthetic_profile(constraints={"max_frames": 124})
+    manifest = make_manifest(defaults={"width": 100, "height": 100, "frames": 124})
+    report = dry_run(profile, manifest)
+    assert not report.has_errors
+
+
+def test_dry_run_errors_when_max_frames_set_but_frames_unresolved() -> None:
+    profile = _synthetic_profile(constraints={"max_frames": 124})
+    manifest = make_manifest(defaults={"width": 100, "height": 100})  # no frames anywhere
+    report = dry_run(profile, manifest)
+    assert report.has_errors
+    assert any(i.field == "frames" and i.severity == "error" for i in report.issues)
+
+
+def test_dry_run_ignores_frames_entirely_when_profile_sets_no_frame_budget() -> None:
+    # Image profiles have no frame axis; they must be wholly unaffected.
+    profile = _synthetic_profile(constraints={"resolution_multiple": 8})
+    manifest = make_manifest(defaults={"width": 720, "height": 1280})
+    report = dry_run(profile, manifest)
+    assert not report.has_errors
+    assert not any(i.field in {"frames", "max_frames"} for i in report.issues)
+
+
 def test_dry_run_collects_all_issues_not_just_the_first() -> None:
     profile = _synthetic_profile(constraints={"resolution_multiple": 8, "max_megapixels": 0.01})
     manifest = make_manifest(

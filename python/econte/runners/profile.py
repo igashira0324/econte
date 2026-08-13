@@ -65,23 +65,33 @@ class ServerSpec(BaseModel):
 
 
 class Constraints(BaseModel):
-    """``constraints``: validated once per resolved job's width/height,
-    before any network call (both ``--dry-run`` and real runs)."""
+    """``constraints``: validated once per resolved job's width/height (and
+    ``frames``, for profiles that declare a frame budget), before any
+    network call (both ``--dry-run`` and real runs)."""
 
     model_config = ConfigDict(extra="ignore")
 
     resolution_multiple: int | None = None
     max_megapixels: float | None = None
+    max_frames: int | None = None
 
 
 class CostModel(BaseModel):
     """``cost``: the dry-run time estimate model. See
     ``docs/profile-spec.md``'s "Cost estimate" section for the exact
-    formula this feeds (``econte.runners.cost.estimate``)."""
+    formula this feeds (``econte.runners.cost.estimate``).
+
+    ``reference_frames`` is optional so image profiles, which have no frame
+    axis at all, stay unaffected. Setting it opts a profile into
+    frame-proportional scaling *and* makes a resolved ``frames`` mandatory
+    for every job -- the same treatment width/height already get, because a
+    silently-unscaled estimate is worse than a refused one.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
     reference_resolution: Resolution
+    reference_frames: int | None = None
     base_seconds_per_job: float
     first_job_overhead_seconds: float = 0.0
     multipliers: dict[str, float] = Field(default_factory=dict)

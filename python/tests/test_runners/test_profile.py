@@ -27,6 +27,10 @@ def test_load_qwen_profile_shape() -> None:
     assert profile.server.default_port == 8188
     assert profile.constraints.resolution_multiple == 8
     assert profile.constraints.max_megapixels == 1.5
+    # An image profile has no frame axis: both frame fields stay unset, which
+    # is what keeps the frame term out of its cost estimate entirely.
+    assert profile.constraints.max_frames is None
+    assert profile.cost.reference_frames is None
     assert profile.cost.reference_resolution.width == 720
     assert profile.cost.reference_resolution.height == 1280
     assert profile.cost.base_seconds_per_job == 40
@@ -47,12 +51,19 @@ def test_load_minimax_profile_shape() -> None:
     assert profile.server.default_port == 8189
     assert profile.constraints.resolution_multiple == 32
     assert profile.constraints.max_megapixels is None
+    assert profile.constraints.max_frames == 124
     assert profile.cost.reference_resolution.width == 640
     assert profile.cost.reference_resolution.height == 1152
+    assert profile.cost.reference_frames == 124
     assert profile.cost.base_seconds_per_job == 810
     assert profile.cost.first_job_overhead_seconds == 0
     assert profile.cost.multipliers == {"fast": 1.8}
-    assert profile.defaults == {"steps": 20, "fast": False, "material": "chain_start"}
+    assert profile.defaults == {
+        "steps": 20,
+        "fast": False,
+        "material": "chain_start",
+        "frames": 124,
+    }
     assert set(profile.variants) == {"origin_ec", "origin_fast", "chained_ec", "chained_fast"}
     assert profile.variant_selector.map[-1].when == {}
     assert profile.variant_selector.map[-1].variant == "origin_ec"

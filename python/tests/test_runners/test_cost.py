@@ -17,7 +17,7 @@ import pytest
 
 from econte.runners import CostError, Profile, estimate
 
-from .conftest import make_manifest
+from .conftest import make_manifest, make_minimal_profile_dict
 
 
 def test_minimax_single_non_fast_job_at_reference_resolution(minimax_profile: Profile) -> None:
@@ -112,3 +112,65 @@ def test_cost_error_when_width_or_height_unresolved(minimax_profile: Profile) ->
     )
     with pytest.raises(CostError, match="a"):
         estimate(minimax_profile, manifest)
+
+
+def test_cost_scales_linearly_with_frames(minimax_profile: Profile) -> None:
+    # The profile's reference_frames is 124 (and profile.defaults supplies
+    # frames: 124), so halving the frames halves the estimate.
+    manifest = make_manifest(
+        profile="minimax-h3-motion-context",
+        defaults={"width": 640, "height": 1152},
+        jobs=[{"id": "a", "seed": 1, "prompt": "p", "fast": False, "frames": 62}],
+    )
+    result = estimate(minimax_profile, manifest)
+    assert result.total_seconds == pytest.approx(810.0 * (62 / 124))
+
+
+def test_cost_frame_term_is_neutral_at_the_reference_frame_count(
+    minimax_profile: Profile,
+) -> None:
+    # profile.defaults sets frames: 124 == reference_frames, so a manifest
+    # that never mentions frames must produce exactly the pre-existing
+    # 810s figure — i.e. adding frame scaling changed no established number.
+    manifest = make_manifest(
+        profile="minimax-h3-motion-context",
+        defaults={"width": 640, "height": 1152},
+        jobs=[{"id": "a", "seed": 1, "prompt": "p", "fast": False}],
+    )
+    result = estimate(minimax_profile, manifest)
+    assert result.total_seconds == pytest.approx(810.0)
+
+
+def test_cost_ignores_frames_when_profile_sets_no_reference_frames(
+    qwen_profile: Profile,
+) -> None:
+    # The keyframe profile has no frame axis; a stray frames value in the
+    # manifest must not silently start scaling an image profile's estimate.
+    manifest = make_manifest(
+        profile="qwen-image-edit-2511",
+        defaults={"width": 720, "height": 1280, "frames": 999},
+        jobs=[{"id": "a", "seed": 1, "prompt": "p"}],
+    )
+    result = estimate(qwen_profile, manifest)
+    assert result.total_seconds == pytest.approx(280.0)
+
+
+def test_cost_error_when_reference_frames_set_but_frames_unresolved() -> None:
+    # Uses a synthetic profile rather than the minimax one: that profile now
+    # carries `frames: 124` in its own defaults, and a None at a higher layer
+    # deliberately does not override a lower one (see resolve_context), so
+    # there is no way to un-resolve frames for it -- which is the point.
+    profile = Profile.model_validate(
+        make_minimal_profile_dict(
+            cost={
+                "reference_resolution": {"width": 100, "height": 100},
+                "reference_frames": 124,
+                "base_seconds_per_job": 10,
+                "first_job_overhead_seconds": 5,
+                "multipliers": {},
+            }
+        )
+    )
+    manifest = make_manifest(defaults={"width": 100, "height": 100})
+    with pytest.raises(CostError, match="frames"):
+        estimate(profile, manifest)

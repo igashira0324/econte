@@ -39,6 +39,7 @@ defaults:
   steps: 20
   fast: false
   material: chain_start
+  frames: 124
 
 description: >
   MiniMax H3 Ref2V + Motion Context clip chaining. Verified ~13.5 min/clip
@@ -54,9 +55,22 @@ server:
 
 constraints:
   resolution_multiple: 32
+  # 124 frames (5.167s at 24fps) is the largest clip these cost figures were
+  # ever measured at, and an error rather than a warning because overshooting
+  # it does not degrade gracefully. Measured on the reference RTX 3060 12GB:
+  # 124 frames -> ~70s/step; 339 frames -> >5400s/step, i.e. ~77x slower for
+  # 2.7x the frames. Two things compound past this point — attention is
+  # superlinear in sequence length, and the 21GB DiT loses VRAM residency and
+  # re-streams its weights every step. Reference *videos*, where a profile
+  # feeds one, are packed into the same attention sequence as the generated
+  # clip, so lengthening a clip lengthens the sequence twice over. Want a
+  # longer shot: chain more clips (`material: chain` + `chain_from`), which is
+  # what this profile is built around.
+  max_frames: 124
 
 cost:
   reference_resolution: { width: 640, height: 1152 }
+  reference_frames: 124
   base_seconds_per_job: 810
   first_job_overhead_seconds: 0
   multipliers:
@@ -110,7 +124,7 @@ variants:
           prompt: "${prompt}"
           width: "${width}"
           height: "${height}"
-          length: 124
+          length: "${frames}"
           ref_image_size: match
           "ref_images.ref_image_0": ["5", 0]
       "7":
@@ -170,7 +184,7 @@ variants:
           prompt: "${prompt}"
           width: "${width}"
           height: "${height}"
-          length: 124
+          length: "${frames}"
           ref_image_size: match
           "ref_images.ref_image_0": ["5", 0]
       "7":
@@ -233,7 +247,7 @@ variants:
           prompt: "${prompt}"
           width: "${width}"
           height: "${height}"
-          length: 124
+          length: "${frames}"
           ref_image_size: match
           "ref_images.ref_image_0": ["5", 0]
       "20":
@@ -308,7 +322,7 @@ variants:
           prompt: "${prompt}"
           width: "${width}"
           height: "${height}"
-          length: 124
+          length: "${frames}"
           ref_image_size: match
           "ref_images.ref_image_0": ["5", 0]
       "20":
