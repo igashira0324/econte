@@ -67,9 +67,11 @@ the only supported backends.
 
 ## Status
 
-Early and under active development (targeting v0.1.0). The schema may
-still change before 1.0.0 — see `CHANGELOG.md` for what moved and when.
-Issues and small, focused PRs are welcome; see `CONTRIBUTING.md`.
+**v0.1.0.** The full loop — storyboard → compile → generate → ingest →
+sheet — works end to end, for both keyframes and chained video, verified
+against real ComfyUI runs (see `examples/haruka/`). The schema may still
+change before 1.0.0 — see `CHANGELOG.md` for what moved and when. Issues
+and small, focused PRs are welcome; see `CONTRIBUTING.md`.
 
 ## License
 

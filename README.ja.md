@@ -61,7 +61,9 @@ Context(動画)の2つのリファレンスプロファイルは「対応バッ�
 
 ## 現状
 
-開発初期段階(v0.1.0を目標)。1.0.0までスキーマは変更され得ます(`CHANGELOG.md`参照)。
+**v0.1.0。** storyboard → compile → 生成 → ingest → sheet という一連の流れが、
+キーフレーム・連鎖動画の両方で実際のComfyUIに対して動作確認済みです
+(`examples/haruka/`参照)。1.0.0までスキーマは変更され得ます(`CHANGELOG.md`参照)。
 Issue・小さく焦点を絞ったPRを歓迎します(`CONTRIBUTING.md`参照)。
 
 ## ライセンス
