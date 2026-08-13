@@ -1,0 +1,10 @@
+# Normalize line endings so a fresh clone behaves the same on every OS.
+# Without this, Windows contributors with core.autocrlf=true see phantom
+# "modified" statuses on generated files (e.g. spec/econte.schema.json is
+# emitted with LF by scripts/build-schema.mjs) even when content is
+# identical after normalization.
+* text=auto
+
+*.jpg binary
+*.png binary
+*.mp4 binary
