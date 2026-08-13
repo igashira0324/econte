@@ -1,0 +1,28 @@
+{
+  "profile": "minimax-h3-motion-context",
+  "manifest": "examples/haruka/haruka-sample_clips_minimax-h3-motion-context.json",
+  "generatedAt": "2026-08-13T02:32:38Z",
+  "jobs": [
+    {
+      "id": "S03-B",
+      "status": "success",
+      "file": "haruka-sample_clips_minimax-h3-motion-context/S03-B_00001_.mp4",
+      "elapsedSeconds": 601.8,
+      "seed": 1786335417,
+      "prompt": "The character from Picture 1, walking steadily away down a wide city street at dusk, seen from behind, travel bag over her shoulder, ponytail and jacket moving gently in the wind, street lights growing brighter ahead of her",
+      "material": "chain_start",
+      "ref_image": "keyframes/S03-A.jpg"
+    },
+    {
+      "id": "S03-D",
+      "status": "success",
+      "file": "haruka-sample_clips_minimax-h3-motion-context/S03-D_00001_.mp4",
+      "elapsedSeconds": 701.9,
+      "seed": 1061060576,
+      "prompt": "She keeps walking at the same steady pace down the dusk street, more city lights visible ahead, a light breeze picking up",
+      "material": "chain",
+      "chain_from": "S03-B",
+      "ref_image": "characters/haruka/front.jpg"
+    }
+  ]
+}

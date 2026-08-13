@@ -63,8 +63,11 @@ hand-written harness scripts this project grew out of.
 
 - `examples/haruka/` — a complete runnable example: an original CC0 character
   with a three-view reference sheet, an 8-shot vertical storyboard exercising
-  B-roll / chain / chain_from / lyric / multi-backend staging, and the
-  keyframes generated from it by econte's own CLI.
+  B-roll / chain / chain_from / lyric / multi-backend staging, the keyframes
+  generated from it by econte's own CLI, and a real chained video sequence
+  (stills-first: an approved keyframe seeds a `minimax-h3-motion-context`
+  chain, `chain_from` continues it into a second clip with a frame-exact
+  join) — 22.1 minutes measured against a 21.6-minute dry-run estimate.
 
 ### Fixed
 - `econte compile --target clips` never populated a `latent_folder` manifest

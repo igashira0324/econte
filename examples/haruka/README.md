@@ -44,17 +44,35 @@ examples must never contain third-party IP or real-person likenesses.
 
 ## What's already here
 
-The keyframes in `keyframes/` were produced by econte itself, on an
-RTX 3060 12GB, from exactly the commands below — 7 shots at 864x1536,
-~28s each for the character-free B-roll (the profile's `no_ref` variant)
-and ~48s each for the character shots (`with_ref`), 5m43s total. The
-files committed here are downscaled to 768px JPEG to keep the repository
-small; the generator produced full-resolution PNGs.
+**Keyframes.** The images in `keyframes/` were produced by econte itself,
+on an RTX 3060 12GB, from exactly the commands below — 7 shots at
+864x1536, ~28s each for the character-free B-roll (the profile's
+`no_ref` variant) and ~48s each for the character shots (`with_ref`),
+5m43s total. The files committed here are downscaled to 768px JPEG to
+keep the repository small; the generator produced full-resolution PNGs.
 
 `haruka-sample_keyframes_qwen-image-edit-2511.json` (the compiled
 manifest) and `..._report.json` (the delivery report) are committed too,
 so you can read what a real manifest and a real report look like without
 running anything.
+
+**Video.** `S03-A`'s approved keyframe (above) was also used to seed a
+real chained video sequence via `minimax-h3-motion-context`: `S03-B`
+(`material: chain_start`, seeded from `S03-A`'s keyframe) then `S03-D`
+(`material: chain`, `chain_from: S03-B`) — the mechanism that lets a
+generator continue one continuous take across a cut instead of every
+clip re-guessing motion from a single still. Measured: 601.8s + 701.9s
+= 22.1 minutes total at 576x1024, matching the `--dry-run` estimate
+(1296.0s) to within 0.6%. The chain's join is frame-exact — clip 1's
+last frame and clip 2's first frame are pixel-identical, which is what
+Motion Context's pinned-frame handoff is supposed to guarantee.
+
+`haruka-sample_clips_minimax-h3-motion-context.json` and its
+`..._report.json` are committed for the same reason as the keyframes
+pair. The generated `.mp4` files themselves are **not** committed
+(repository media policy — see the root `.gitignore`); `S03-B`/`S03-D`'s
+`render` field is therefore left unset here even though a real,
+successful render exists — the report is the record of it.
 
 ## Running it yourself
 
