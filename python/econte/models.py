@@ -14,7 +14,7 @@ wire format and onto the Zod schema this mirrors.
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -25,6 +25,26 @@ AspectRatioStr = Annotated[str, StringConstraints(pattern=r"^\d+:\d+$")]
 HexColorStr = Annotated[str, StringConstraints(pattern=r"^#[0-9a-fA-F]{6}$")]
 CharacterIdStr = Annotated[str, StringConstraints(pattern=r"^[a-z][a-z0-9_-]*$")]
 SceneOrShotIdStr = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]+$")]
+# Source.backend is a profiles/<id>.yaml profile id. `econte compile` uses it
+# verbatim as a path component (the profile file and the manifest file name),
+# so it is restricted to the same slug alphabet as scene/shot ids: no "/",
+# "\\", ".." or drive letters.
+BackendIdStr = Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_-]+$")]
+
+# Upper bounds on array sizes and on the total shot count
+# (docs/schema-spec.md, rule 7). They are far above any real storyboard; they
+# exist so the work a validator does on an untrusted document is bounded.
+# pydantic stops at the first violated max_length; the total shot count is
+# checked by Storyboard._check_total_shots before any shot is validated.
+# Mirrors ARRAY_LIMITS in packages/econte/src/schema.ts.
+MAX_ASPECT_RATIOS = 16
+MAX_CHARACTERS = 200
+MAX_REFS = 100
+MAX_PALETTE = 64
+MAX_NEGATIVE = 256
+MAX_SCENES = 1000
+MAX_SHOTS_PER_SCENE = 2000
+MAX_TOTAL_SHOTS = 10000
 
 # ISO 8601 datetime with a required offset (`Z`, or `+HH:MM`/`+HHMM`),
 # mirroring the regex `packages/econte/src/schema.ts`'s
@@ -64,7 +84,7 @@ class Metadata(BaseModel):
     audio: str | None = None
     durationInSeconds: float | None = Field(default=None, gt=0)
     fps: int = Field(gt=0)
-    aspectRatios: list[AspectRatioStr] = Field(min_length=1)
+    aspectRatios: list[AspectRatioStr] = Field(min_length=1, max_length=MAX_ASPECT_RATIOS)
     concept: str | None = None
 
 
@@ -75,7 +95,7 @@ class Character(BaseModel):
 
     id: CharacterIdStr
     identity: str = Field(min_length=1)
-    refs: list[str] = Field(min_length=1)
+    refs: list[str] = Field(min_length=1, max_length=MAX_REFS)
 
 
 class GlobalStyle(BaseModel):
@@ -83,9 +103,9 @@ class GlobalStyle(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    palette: list[HexColorStr] | None = None
+    palette: list[HexColorStr] | None = Field(default=None, max_length=MAX_PALETTE)
     grade: str | None = None
-    negative: list[str] | None = None
+    negative: list[str] | None = Field(default=None, max_length=MAX_NEGATIVE)
 
 
 class Camera(BaseModel):
@@ -103,7 +123,7 @@ class Source(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     type: SourceType
-    backend: str | None = None
+    backend: BackendIdStr | None = None
     keyframe: str | None = None
     seed: int | None = None
     prompt: str | None = None
@@ -190,7 +210,7 @@ class Scene(BaseModel):
 
     id: SceneOrShotIdStr
     section: str | None = None
-    shots: list[Shot] = Field(min_length=1)
+    shots: list[Shot] = Field(min_length=1, max_length=MAX_SHOTS_PER_SCENE)
 
 
 class Storyboard(BaseModel):
@@ -200,10 +220,30 @@ class Storyboard(BaseModel):
 
     version: VersionStr
     metadata: Metadata
-    characters: list[Character]
+    characters: list[Character] = Field(max_length=MAX_CHARACTERS)
     globalStyle: GlobalStyle | None = None
     audioAnalysis: str | None = None
-    scenes: list[Scene] = Field(min_length=1)
+    scenes: list[Scene] = Field(min_length=1, max_length=MAX_SCENES)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _check_total_shots(cls, data: Any) -> Any:
+        # Per-list caps bound each array, but scenes x shots-per-scene still
+        # multiply to millions; count shots on the raw input so an oversized
+        # document is rejected before any shot is validated (rule 7).
+        if isinstance(data, dict):
+            scenes = data.get("scenes")
+            if isinstance(scenes, list) and len(scenes) <= MAX_SCENES:
+                total = sum(
+                    len(scene["shots"])
+                    for scene in scenes
+                    if isinstance(scene, dict) and isinstance(scene.get("shots"), list)
+                )
+                if total > MAX_TOTAL_SHOTS:
+                    raise ValueError(
+                        f"scenes: at most {MAX_TOTAL_SHOTS} shots in total (got {total})"
+                    )
+        return data
 
     @model_validator(mode="after")
     def _validate_document_rules(self) -> Storyboard:
@@ -215,8 +255,9 @@ class Storyboard(BaseModel):
         4. Shot.frames: frames[1] > frames[0].
         5. Shot.subject, if "@"-prefixed, must reference an existing Character.id.
         6. Lyric.endMs > Lyric.startMs.
-        (Non-empty array constraints -- rule 7 -- are enforced via Field
-        constraints on the individual models above.)
+        (Rule 7 -- non-empty and upper-bound array constraints -- is enforced
+        via Field constraints on the individual models above, and the total
+        shot count by _check_total_shots before any shot is validated.)
         8. Shot.source.chain_from, if present, must reference an existing
            Shot.id elsewhere in the document (not itself).
         """

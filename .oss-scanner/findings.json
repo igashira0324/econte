@@ -1,0 +1,222 @@
+{
+  "schema": 1,
+  "project": "econte",
+  "id_rules": "IDs are assigned once and never renumbered or reused. fingerprint = sha256(rule|file|symbol)[:12], so a re-scan can match an entry after line numbers move.",
+  "status_flow": [
+    "model-found",
+    "second-pass-confirmed",
+    "fixed-pending-review",
+    "fixed-confirmed",
+    "wontfix",
+    "accepted",
+    "mitigated"
+  ],
+  "severity_note": "severity is the second pass's rating; first_pass_severity is kept when it differs, and the owner makes the final call (threat_model.md, 'Who decides').",
+  "findings": [
+    {
+      "id": "ECO-0001",
+      "rule": "path-traversal",
+      "severity": "medium",
+      "first_pass_severity": "high",
+      "title": "source.backend is used as a path component: compile loads any .yaml file as the profile and overwrites any .json file with a manifest",
+      "file": "python/econte/converters/compile.py",
+      "symbol": "compile_storyboard",
+      "status": "fixed-pending-review",
+      "second_pass": "confirmed",
+      "second_pass_notes": "Write (cli.py manifest path): reproduced with 'a/../../x', with or without the intermediate directory; a sentinel .json outside the output directory was overwritten. Rated MEDIUM: the content is a fixed-shape manifest, with no code execution or read-back. '../x' cannot escape (its first component is an ordinary name) and absolute values fail with EINVAL. Read (profile path): '../x' and 'C:/x' load a YAML outside profiles/. Rated LOW: safe_load only, and errors reach only the operator's console. Post-fix: both are blocked by the schema pattern, and the sentinel stayed intact.",
+      "severity_dispute": "The first pass rated HIGH (a write outside the output directory by default). The second pass rated by how much of the content the attacker controls, and the threat model's rubric was refined to match. The owner makes the final call.",
+      "reproducer": "storyboard shot with source.backend \"a/../../x\": econte compile writes the manifest to <output_dir>/../x.json. source.backend \"../x\" or \"C:/x\": the profile is read from profiles/../x.yaml or C:\\x.yaml.",
+      "root_cause": "backend is a free string in the schema and is joined into file paths with no check.",
+      "correction": "The first-pass example 'slug_keyframes_../evil.json' does not escape: '..' is not its own path segment there.",
+      "fix": "schema pattern ^[A-Za-z0-9_-]+$ in both implementations; re-checked in compile_storyboard before any path is built",
+      "tests": [
+        "python/tests/test_security.py::test_backend_must_be_a_profile_id",
+        "python/tests/test_security.py::test_compile_rechecks_backend_even_without_validation",
+        "spec/fixtures/invalid-source-backend-path-traversal.json",
+        "spec/fixtures/valid-source-backend-profile-id.json"
+      ],
+      "fingerprint": "afdefd67c79b",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0002",
+      "rule": "untrusted-file-read",
+      "severity": "medium",
+      "title": "sheet embeds images named by source.keyframe even outside the storyboard directory (as downscaled thumbnails)",
+      "file": "python/econte/converters/sheet.py",
+      "symbol": "_render_keyframe_cell",
+      "status": "fixed-pending-review",
+      "second_pass": "confirmed",
+      "second_pass_notes": "Reproduced with default flags: '../outside/secret.png' (1200x800) and an absolute path were embedded as 420x280 JPEG thumbnails; a text file was refused. Post-fix: blocked by default, and --allow-external-keyframes embeds it. Agrees with MEDIUM. Precision: only image files leak, as downscaled thumbnails.",
+      "reproducer": "source.keyframe \"../../secret.png\" or an absolute path: the image is base64-embedded in the HTML (pre-fix).",
+      "root_cause": "keyframe is joined to storyboard_dir with no containment check, then decoded and embedded.",
+      "fix": "symlink-aware containment check; placeholder unless --allow-external-keyframes; only PNG, JPEG and WebP decoded; images above 64 megapixels refused before decoding",
+      "tests": [
+        "python/tests/test_security.py::test_sheet_embeds_keyframe_inside_storyboard_dir",
+        "python/tests/test_security.py::test_sheet_refuses_keyframe_outside_storyboard_dir"
+      ],
+      "fingerprint": "09090fb26b62",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0003",
+      "rule": "vulnerable-dependency",
+      "severity": "medium",
+      "title": "Pillow below 13.0.0: decoder vulnerabilities reachable from econte sheet",
+      "file": "python/pyproject.toml",
+      "symbol": "pillow",
+      "status": "fixed-pending-review",
+      "second_pass": "not-run (dependency advisory; IDs re-checked against OSV by the lead)",
+      "reproducer": "OSV lists 41 advisories for Pillow 12.3.0, all fixed in 13.0.0, for example CVE-2026-112403 (heap overflow in ImagingJpegDecode) and CVE-2026-112900 (argument injection in the Ghostscript call). Reachable through Image.open().load() in sheet.",
+      "root_cause": "the dependency floor was pillow>=10.",
+      "fix": "pillow>=13.0.0 (requires-python raised to >=3.11, which Pillow 13 needs); sheet now decodes only PNG, JPEG and WebP, which removes most decoder attack surface",
+      "tests": [
+        "CI matrix (Python 3.11 and 3.12, pip install -e .[dev])",
+        "python/tests/test_security.py::test_sheet_decodes_png_jpeg_webp",
+        "python/tests/test_security.py::test_sheet_does_not_decode_other_formats"
+      ],
+      "fingerprint": "f9f8d158e05d",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0004",
+      "rule": "unsafe-server-path",
+      "severity": "low",
+      "title": "ingest writes a report's job.file containing '..', a drive or a root into the storyboard",
+      "file": "python/econte/converters/ingest.py",
+      "symbol": "_job_file_escapes",
+      "status": "fixed-pending-review",
+      "second_pass": "confirmed",
+      "second_pass_notes": "Reproduced: '../', 'C:/', '/abs', 'C:secret.png', '..\\' and render.file were written verbatim pre-fix. Post-fix: all blocked except the root-relative '\\x.png', which resolves to C:\\x.png; fixed by also rejecting PureWindowsPath(file).root. Agrees with LOW: storyboards could already hold these strings, so ingest adds nothing beyond ECO-0002.",
+      "reproducer": "report job file \"../../x.png\", \"C:/x.png\" or \"\\x.png\" was written as source.keyframe before the fix.",
+      "root_cause": "job.file is trusted as storyboard-relative.",
+      "correction": "The first pass said job.file comes from the ComfyUI response. runner.py:279-285 computes it from a local glob of the profile's output.glob. The realistic sources are an untrusted profile's glob and shared or hand-edited reports.",
+      "fix": "job skipped as unsafe_path: in verbatim mode a drive, a root, an absolute path or a '..' segment is refused; with --comfyui-output-dir the path must stay inside that directory",
+      "tests": [
+        "python/tests/test_security.py::test_ingest_verbatim_mode_refuses_escaping_paths",
+        "python/tests/test_security.py::test_ingest_rebase_mode_confines_to_output_dir",
+        "python/tests/test_security.py::test_ingest_report_skips_unsafe_job_as_unsafe_path"
+      ],
+      "fingerprint": "e5eed7a4c5bd",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0005",
+      "rule": "profile-directed-host",
+      "severity": "low",
+      "title": "the profile's default_host decides where econte run connects",
+      "file": "python/econte/cli.py",
+      "symbol": "_cmd_run",
+      "status": "mitigated",
+      "second_pass": "not-run (low; traced during the audit)",
+      "reproducer": "profile server.default_host set to a LAN or external host: econte run posts /prompt there when --host is not given.",
+      "root_cause": "the host is taken from an untrusted profile.",
+      "reason": "a warning on stderr when the host comes from the profile and is not loopback; not a hard block",
+      "tests": [
+        "python/tests/test_security.py::test_run_warns_when_the_profile_picks_a_non_loopback_host",
+        "python/tests/test_security.py::test_run_does_not_warn_for_loopback_or_an_explicit_host",
+        "python/tests/test_security.py::test_loopback_hosts",
+        "python/tests/test_security.py::test_non_loopback_hosts"
+      ],
+      "fingerprint": "6b3b591a67d8",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0006",
+      "rule": "unsafe-identifier",
+      "severity": "low",
+      "title": "manifest profile, output_prefix and job ids become file names and ComfyUI filename_prefix without a pattern",
+      "file": "python/econte/runners/manifest.py",
+      "symbol": "Manifest",
+      "status": "fixed-pending-review",
+      "second_pass": "not-run (low)",
+      "reproducer": "output_prefix \"../x\" or job id \"a/../b\" in a shared manifest (pre-fix).",
+      "root_cause": "identifiers in manifests are free strings.",
+      "fix": "pattern ^[A-Za-z0-9_-]+$ on profile, output_prefix and jobs[].id",
+      "tests": [
+        "python/tests/test_security.py::test_manifest_identifiers_must_be_slugs",
+        "python/tests/test_security.py::test_example_manifests_still_load"
+      ],
+      "fingerprint": "33a20e95c753",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0007",
+      "rule": "unbounded-input",
+      "severity": "low",
+      "title": "unbounded input: zod 3 validates every element of an oversized array (GHSA-mrhx-c7xc-m3w5), and the total shot count had no bound",
+      "file": "packages/econte/src/schema.ts",
+      "symbol": "StoryboardSchema",
+      "status": "mitigated",
+      "second_pass": "not-run (low; measured by the lead)",
+      "reproducer": "validateStoryboard() on metadata.aspectRatios with 1,000,000 invalid entries returned 1,000,001 issues in 813 ms with a 317 MB heap (zod 3.25.76, measured 2026-10-25), even with .max(16) on the array. pydantic stopped at the first violated max_length (1 error, 2 ms). 1000 scenes x 2000 shots stayed within the per-array caps.",
+      "root_cause": "zod 3 records the too_big issue and still parses every element; the per-array caps multiply (scenes x shots) to two million shots.",
+      "correction": "The first version of this fix claimed the per-array .max() caps bounded zod's work; the measurement showed they do not.",
+      "reason": "validateStoryboard() checks ARRAY_LIMITS on the raw value before zod; a 10,000 total shot cap in both implementations (a pydantic before-validator in Python); a 32 MiB input limit in both CLIs; the npm audit gate allowlists this GHSA with its mitigation until the zod 4 migration",
+      "tests": [
+        "packages/econte/test/limits.test.ts",
+        "python/tests/test_security.py::test_oversized_array_fails_fast",
+        "python/tests/test_security.py::test_total_shot_count_is_bounded",
+        "python/tests/test_security.py::test_size_limit_refuses_oversized_files",
+        "spec/fixtures/invalid-too-many-aspect-ratios.json"
+      ],
+      "fingerprint": "78125b97e662",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0008",
+      "rule": "ci-hardening",
+      "severity": "low",
+      "title": "CI token permissions were not restricted, npm install ran dependency lifecycle scripts, and CI ran on Node 20 (end of life in April 2026)",
+      "file": ".github/workflows/ci.yml",
+      "symbol": "jobs",
+      "status": "fixed-pending-review",
+      "second_pass": "not-run (low)",
+      "reproducer": "a hardening gap with no demonstrated path from a pull request; no reproducer.",
+      "root_cause": "no top-level permissions block; npm install without --ignore-scripts; node-version 20.",
+      "fix": "permissions: contents: read; npm ci --ignore-scripts; Node 22 in CI and the audit Dockerfile",
+      "tests": [
+        "CI run on push"
+      ],
+      "fingerprint": "cacd3803bb99",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    },
+    {
+      "id": "ECO-0009",
+      "rule": "dev-dependency-advisory",
+      "severity": "low",
+      "title": "advisories against devDependencies, two of them critical (vitest UI server, tinypool worker options)",
+      "file": "packages/econte/package.json",
+      "symbol": "devDependencies",
+      "status": "fixed-pending-review",
+      "second_pass": "not-run (dependency advisory; re-checked with npm audit by the lead)",
+      "reproducer": "npm audit at 8934b7c: critical vitest (GHSA-5xrq-8626-4rwp: file read and execution while the UI server listens) and tinypool (GHSA-5gmw-xhrv-c9v3, GHSA-85c8-ppgw-ccpr: prototype pollution to RCE through worker options); high brace-expansion, js-yaml, source-map-js and vite; moderate @vitest/mocker, esbuild and vite-node. All are devDependencies, and none was reachable in CI (no UI or dev server, no untrusted worker options).",
+      "root_cause": "vitest ^2 pinned vite 5, esbuild 0.21 and tinypool 1.1; the lockfile had not been refreshed.",
+      "correction": "The first version of this entry listed only some of these and marked them accepted; the two criticals were missing.",
+      "fix": "vitest ^5.0.5 (devDependency) and a non-breaking npm audit fix; npm audit now reports only the runtime zod advisory (ECO-0007)",
+      "tests": [
+        "npm ci --ignore-scripts, build, test (25) and lint pass on Node 22, as in CI"
+      ],
+      "fingerprint": "dc176f116915",
+      "model_found": true,
+      "human_confirmed": false,
+      "found_on": "2026-10-25"
+    }
+  ]
+}

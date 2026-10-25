@@ -22,6 +22,7 @@ and :mod:`econte.converters.sheet`.
 from __future__ import annotations
 
 import argparse
+import ipaddress
 import json
 import sys
 from pathlib import Path
@@ -45,10 +46,35 @@ from .runners import (
     run as run_manifest,
 )
 
+# Storyboards and reports are kilobytes; a file in the tens of megabytes is
+# either a mistake or an attempt to exhaust the validator, so it is refused
+# before being read (mirrors MAX_STORYBOARD_BYTES in
+# packages/econte/scripts/validate-cli.mjs).
+MAX_STORYBOARD_BYTES = 32 * 1024 * 1024
+
+
+def _ensure_size_limit(path: Path) -> None:
+    """Raise ``OSError`` (handled like any other read failure by the callers)
+    if ``path`` is larger than :data:`MAX_STORYBOARD_BYTES`."""
+    size = path.stat().st_size
+    if size > MAX_STORYBOARD_BYTES:
+        raise OSError(f"file is {size} bytes, above the {MAX_STORYBOARD_BYTES}-byte limit")
+
+
+def _is_loopback_host(host: str) -> bool:
+    """True for ``localhost`` and loopback IP literals (``127.0.0.1``, ``::1``)."""
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host.strip("[]")).is_loopback
+    except ValueError:
+        return False
+
 
 def _cmd_validate(path: str) -> int:
     file_path = Path(path)
     try:
+        _ensure_size_limit(file_path)
         raw = file_path.read_text(encoding="utf-8")
     except OSError as exc:
         print(f"error: could not read {path}: {exc}", file=sys.stderr)
@@ -83,6 +109,7 @@ def _load_storyboard(path: Path) -> tuple[Storyboard | None, int]:
     for "the document itself is invalid").
     """
     try:
+        _ensure_size_limit(path)
         raw = path.read_text(encoding="utf-8")
     except OSError as exc:
         print(f"error: could not read {path}: {exc}", file=sys.stderr)
@@ -154,6 +181,14 @@ def _cmd_run(args: argparse.Namespace) -> int:
 
     host = args.host or profile.server.default_host
     port = args.port or profile.server.default_port
+    if args.host is None and not _is_loopback_host(host):
+        # The profile is untrusted input (it travels with shared storyboards);
+        # make it visible when it, rather than the operator, picks the host.
+        print(
+            f"warning: connecting to {host}:{port}, taken from the profile's "
+            "server.default_host rather than --host; pass --host to override",
+            file=sys.stderr,
+        )
     client = ComfyUIClient(f"http://{host}:{port}")
     output_dir = Path(args.output_dir) if args.output_dir else Path.cwd()
 
@@ -241,6 +276,7 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
 
     report_path = Path(args.report)
     try:
+        _ensure_size_limit(report_path)
         report_raw = report_path.read_text(encoding="utf-8")
     except OSError as exc:
         print(f"error: could not read {report_path}: {exc}", file=sys.stderr)
@@ -280,7 +316,7 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
     print(f"updated {len(result.updated)} shot(s): {updated_desc}")
 
     if result.skipped:
-        print(f"{len(result.skipped)} job(s) skipped (non-success status):")
+        print(f"{len(result.skipped)} job(s) skipped (non-success status, or unsafe_path):")
         for skipped_job in result.skipped:
             print(f"  [{skipped_job.status}] {skipped_job.id}")
 
@@ -326,6 +362,7 @@ def _cmd_sheet(args: argparse.Namespace) -> int:
         storyboard,
         storyboard_dir=storyboard_path.parent,
         thumb_width=args.thumb_width,
+        allow_external_keyframes=args.allow_external_keyframes,
     )
 
     output_path = (
@@ -454,6 +491,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=420,
         help="keyframe thumbnail width in pixels, aspect ratio preserved (default: 420)",
+    )
+    sheet_parser.add_argument(
+        "--allow-external-keyframes",
+        action="store_true",
+        help=(
+            "also embed keyframes that resolve outside the storyboard's own directory "
+            "(absolute paths, '..'). Off by default: a shared storyboard must not be able "
+            "to pull arbitrary images from this machine into a sheet that then gets shared."
+        ),
     )
 
     return parser

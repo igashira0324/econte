@@ -306,6 +306,16 @@ def compile_storyboard(
                 continue
 
             backend = source.backend
+            # The schema already restricts source.backend to a slug; re-check
+            # here because `backend` becomes a path component (the profile
+            # file below and the manifest file name in the CLI), and a
+            # Storyboard can be built without validation (model_construct).
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", backend):
+                hard_errors.append(
+                    f"shot {shot.id!r}: source.backend {backend!r} is not a valid profile id "
+                    "(must match ^[A-Za-z0-9_-]+$); refusing to use it as a path"
+                )
+                continue
             profile = profile_cache.get(backend)
             if profile is None:
                 try:

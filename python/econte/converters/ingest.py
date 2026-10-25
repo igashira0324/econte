@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Literal
 
 from ..models import Render, Shot, Storyboard
@@ -26,7 +26,9 @@ IngestTarget = Literal["keyframes", "clips"]
 @dataclass
 class SkippedJob:
     """One report job that was *not* written into the storyboard because
-    its ``status`` was not ``"success"``."""
+    its ``status`` was not ``"success"`` -- or, with the synthetic status
+    ``"unsafe_path"``, because its ``file`` would point the storyboard
+    outside the ComfyUI output directory (see :func:`_job_file_escapes`)."""
 
     id: str
     status: str
@@ -94,6 +96,35 @@ def _rebase_job_file(
         # Different drives on Windows -- no relative path is expressible.
         return absolute.as_posix()
     return Path(relative).as_posix()
+
+
+def _job_file_escapes(file: str | None, comfyui_output_dir: Path | None) -> bool:
+    """True if a report job's ``file`` must not be written into the storyboard.
+
+    ``job.file`` comes from the delivery report. ``econte run`` computes it by
+    globbing the profile's ``output.glob`` under the output directory, but
+    profiles are untrusted and reports are shared and hand-edited, so a report
+    does not get to decide where a storyboard points (it could make
+    ``source.keyframe`` name any file on the operator's machine). Without
+    ``comfyui_output_dir`` the value is written verbatim, so a drive, a root
+    (``\\x`` resolves against the current drive), an absolute path or a
+    ``..`` segment is refused; ``PureWindowsPath`` splits on both separators,
+    so this covers POSIX-style paths too. With ``comfyui_output_dir`` the
+    value must resolve to a location inside that directory; the relative
+    path econte then computes itself (see :func:`_rebase_job_file`) may
+    legitimately start with ``..`` when the storyboard lives elsewhere.
+    """
+    if file is None:
+        return False
+    if comfyui_output_dir is None:
+        path = PureWindowsPath(file)
+        return bool(path.drive or path.root) or ".." in path.parts
+    root = comfyui_output_dir.resolve()
+    try:
+        (root / file).resolve().relative_to(root)
+    except (ValueError, OSError):
+        return True
+    return False
 
 
 def _ingest_keyframe_job(shot: Shot, file: str | None) -> bool:
@@ -205,6 +236,10 @@ def ingest_report(
             # edited between compiling and ingesting, there is nothing
             # sensible to write -- treat like "do not touch that shot"
             # rather than crashing or inventing a Source from scratch.
+            continue
+
+        if _job_file_escapes(job.file, comfyui_output_dir):
+            skipped.append(SkippedJob(id=job.id, status="unsafe_path"))
             continue
 
         file = _rebase_job_file(

@@ -1,0 +1,40 @@
+# Scan profile for econte's model-driven audit (.claude/skills/security-audit/SKILL.md).
+# Read this first, then .oss-scanner/threat_model.md. Paths are relative to the repository root.
+project: econte
+threat_model: .oss-scanner/threat_model.md
+ledger: .oss-scanner/findings.json        # stable IDs; never renumbered or reused
+baseline: .oss-scanner/baseline.json      # rewritten after each full scan
+
+scope:
+  - python/econte/**/*.py
+  - packages/econte/src/**/*.ts
+  - packages/econte/scripts/**/*.mjs
+  - .github/workflows/*.yml
+exclude:
+  - "**/tests/**"         # reviewed for coverage, not audited as attack surface
+  - "**/node_modules/**"
+  - "**/.venv/**"
+  - "examples/**"         # rights-checked media and generated HTML, not code
+  - "spec/fixtures/**"    # golden inputs
+
+untrusted_inputs:
+  - storyboard JSON (validate, compile, ingest, sheet)
+  - profiles/*.yaml, including output.glob (compile, run)
+  - manifest JSON and delivery report JSON (run, ingest)
+  - "ComfyUI HTTP responses: /prompt, /history (run)"
+  - image files referenced by storyboards (sheet)
+
+severity_rule: >-
+  Rate on the default path, then weigh how much of the outcome the attacker controls.
+  A path that needs an extra deliberate step by the operator (an opt-in flag, or a
+  command they wrote themselves) is rated one level lower.
+  Rubric and examples: threat_model.md, "Severity guidance".
+
+verification:
+  second_pass: required           # a fresh agent re-derives every finding from its reproducer
+  human_confirmation: required    # the owner reviews the diff before a finding becomes fixed-confirmed
+
+schedule:
+  full: before each release, and at least monthly
+  diff: after any change to the scope above, against baseline.json
+  automated: .github/workflows/security.yml (CodeQL, pip-audit, npm audit gate; weekly)

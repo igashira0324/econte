@@ -1,0 +1,17 @@
+{
+  "scanned_commit": "8934b7c9c76b707180d099c41d687fbe1e041f29",
+  "scanned_at": "2026-10-25",
+  "mode": "full",
+  "finding_ids": [
+    "ECO-0001",
+    "ECO-0002",
+    "ECO-0003",
+    "ECO-0004",
+    "ECO-0005",
+    "ECO-0006",
+    "ECO-0007",
+    "ECO-0008",
+    "ECO-0009"
+  ],
+  "note": "Full scan of the commit above. Its fixes were verified by the second pass on the working tree and land in the following commit, so the next diff scan (git diff <scanned_commit>..HEAD) re-checks them."
+}

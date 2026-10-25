@@ -40,6 +40,26 @@ const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 /** A `Shot.subject` referencing a character must start with `"@"`. */
 const SUBJECT_PATTERN = /^@.+$/;
 
+/**
+ * Upper bounds on array sizes and on the total shot count
+ * (docs/schema-spec.md, rule 7). They are far above any real storyboard;
+ * they exist so the work a validator does on an untrusted document is
+ * bounded. `validateStoryboard()` (index.ts) checks them before zod parses
+ * anything, because zod 3 keeps validating every element of an array whose
+ * `.max()` check failed. Mirrored by the MAX_* constants in
+ * python/econte/models.py.
+ */
+export const ARRAY_LIMITS = {
+  aspectRatios: 16,
+  characters: 200,
+  refs: 100,
+  palette: 64,
+  negative: 256,
+  scenes: 1000,
+  shotsPerScene: 2000,
+  totalShots: 10000,
+} as const;
+
 // ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
@@ -59,7 +79,8 @@ export const MetadataSchema = z.object({
         .string()
         .regex(ASPECT_RATIO_PATTERN, 'Metadata.aspectRatios entries must match ^\\d+:\\d+$ (e.g. "16:9")'),
     )
-    .min(1, "Metadata.aspectRatios must be non-empty"),
+    .min(1, "Metadata.aspectRatios must be non-empty")
+    .max(ARRAY_LIMITS.aspectRatios, `Metadata.aspectRatios must have at most ${ARRAY_LIMITS.aspectRatios} entries`),
   concept: z.string().optional(),
 });
 export type Metadata = z.infer<typeof MetadataSchema>;
@@ -73,7 +94,10 @@ export const CharacterSchema = z.object({
     .string()
     .regex(CHARACTER_ID_PATTERN, "Character.id must match ^[a-z][a-z0-9_-]*$"),
   identity: z.string().min(1, "Character.identity must be non-empty"),
-  refs: z.array(z.string()).min(1, "Character.refs must be non-empty"),
+  refs: z
+    .array(z.string())
+    .min(1, "Character.refs must be non-empty")
+    .max(ARRAY_LIMITS.refs, `Character.refs must have at most ${ARRAY_LIMITS.refs} entries`),
 });
 export type Character = z.infer<typeof CharacterSchema>;
 
@@ -88,9 +112,13 @@ export const GlobalStyleSchema = z.object({
         .string()
         .regex(HEX_COLOR_PATTERN, 'GlobalStyle.palette entries must be 6-digit hex colors (e.g. "#00e5ff")'),
     )
+    .max(ARRAY_LIMITS.palette, `GlobalStyle.palette must have at most ${ARRAY_LIMITS.palette} entries`)
     .optional(),
   grade: z.string().optional(),
-  negative: z.array(z.string()).optional(),
+  negative: z
+    .array(z.string())
+    .max(ARRAY_LIMITS.negative, `GlobalStyle.negative must have at most ${ARRAY_LIMITS.negative} entries`)
+    .optional(),
 });
 export type GlobalStyle = z.infer<typeof GlobalStyleSchema>;
 
@@ -133,7 +161,13 @@ export type SourceMaterial = z.infer<typeof SourceMaterialEnum>;
 
 export const SourceSchema = z.object({
   type: SourceTypeEnum,
-  backend: z.string().optional(),
+  // A profiles/<id>.yaml profile id. `econte compile` uses it verbatim as a
+  // path component (the profile file and the manifest file name), so it is
+  // restricted to the slug alphabet: no "/", "\\", ".." or drive letters.
+  backend: z
+    .string()
+    .regex(SLUG_ID_PATTERN, "Source.backend must match ^[A-Za-z0-9_-]+$ (a profiles/<id>.yaml id)")
+    .optional(),
   keyframe: z.string().optional(),
   seed: z.number().int().optional(),
   prompt: z.string().optional(),
@@ -233,7 +267,10 @@ export type Shot = z.infer<typeof ShotSchema>;
 export const SceneSchema = z.object({
   id: z.string().regex(SLUG_ID_PATTERN, "Scene.id must match ^[A-Za-z0-9_-]+$"),
   section: z.string().optional(),
-  shots: z.array(ShotSchema).min(1, "Scene.shots must be non-empty"),
+  shots: z
+    .array(ShotSchema)
+    .min(1, "Scene.shots must be non-empty")
+    .max(ARRAY_LIMITS.shotsPerScene, `Scene.shots must have at most ${ARRAY_LIMITS.shotsPerScene} entries`),
 });
 export type Scene = z.infer<typeof SceneSchema>;
 
@@ -244,10 +281,15 @@ export type Scene = z.infer<typeof SceneSchema>;
 const StoryboardObjectSchema = z.object({
   version: z.string().regex(VERSION_PATTERN, "Storyboard.version must be semver x.y.z (e.g. \"0.1.0\")"),
   metadata: MetadataSchema,
-  characters: z.array(CharacterSchema),
+  characters: z
+    .array(CharacterSchema)
+    .max(ARRAY_LIMITS.characters, `Storyboard.characters must have at most ${ARRAY_LIMITS.characters} entries`),
   globalStyle: GlobalStyleSchema.optional(),
   audioAnalysis: z.string().optional(),
-  scenes: z.array(SceneSchema).min(1, "Storyboard.scenes must be non-empty"),
+  scenes: z
+    .array(SceneSchema)
+    .min(1, "Storyboard.scenes must be non-empty")
+    .max(ARRAY_LIMITS.scenes, `Storyboard.scenes must have at most ${ARRAY_LIMITS.scenes} entries`),
 });
 
 /**
@@ -261,7 +303,8 @@ const StoryboardObjectSchema = z.object({
  *   5. `Shot.subject`, if it starts with `"@"`, must reference an existing
  *      `Character.id`.
  *   6. `Lyric.endMs > Lyric.startMs` — enforced on `LyricSchema` itself.
- *   7. Non-empty array constraints — enforced per-field above.
+ *   7. Non-empty and upper-bound array constraints — enforced per-field
+ *      above, plus the total shot count, checked below.
  *   8. `Shot.source.chain_from`, if present, must reference an existing
  *      `Shot.id` elsewhere in the document (not itself).
  */
@@ -293,6 +336,18 @@ export const StoryboardSchema = StoryboardObjectSchema.superRefine((doc, ctx) =>
       sceneIds.add(scene.id);
     }
   });
+
+  // Rule 7 (upper bounds): the total number of shots across all scenes.
+  // validateStoryboard() checks this before parsing; repeating it here keeps
+  // StoryboardSchema itself faithful to the spec.
+  const totalShots = doc.scenes.reduce((sum, scene) => sum + scene.shots.length, 0);
+  if (totalShots > ARRAY_LIMITS.totalShots) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `Storyboard.scenes must contain at most ${ARRAY_LIMITS.totalShots} shots in total (got ${totalShots})`,
+      path: ["scenes"],
+    });
+  }
 
   // Rule 3 (shot id global uniqueness) and Rule 5 (subject referential
   // integrity) both require walking every shot in every scene. Rule 8

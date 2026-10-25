@@ -8,6 +8,51 @@ version field in each release's schema for the exact contract in force.
 
 ## [Unreleased]
 
+### Security
+- `Source.backend` is validated as a profile id (`^[A-Za-z0-9_-]+$`) in both
+  implementations. `econte compile` used it verbatim as a path component, so
+  a shared storyboard could make it load any `.yaml` file as the profile and
+  overwrite any `.json` file with a manifest (path traversal).
+  `compile_storyboard` re-checks it.
+- `econte sheet` embeds only keyframes that live inside the storyboard's own
+  directory; anything else gets a placeholder unless
+  `--allow-external-keyframes` is passed. It decodes only PNG, JPEG and
+  WebP, and refuses images above 64 megapixels before decoding.
+- `econte ingest` skips report jobs whose `file` is absolute, root-relative,
+  has a drive letter, contains a `..` segment, or (with
+  `--comfyui-output-dir`) resolves outside that directory, and lists them as
+  `unsafe_path`.
+- `econte run` warns when the ComfyUI host comes from the profile rather
+  than `--host` and is not loopback.
+- Manifest `profile`, `output_prefix` and `jobs[].id` are restricted to the
+  slug alphabet (they become file names and ComfyUI's `filename_prefix`).
+- Array sizes and the total number of shots are bounded
+  (`docs/schema-spec.md`, rule 7), and both CLIs refuse storyboard files
+  above 32 MiB. `validateStoryboard()` checks the bounds before zod parses
+  anything, because zod 3 keeps validating every element of an array whose
+  `.max()` check failed (GHSA-mrhx-c7xc-m3w5): one million entries produced
+  one million issues and 317 MB of heap before this check.
+- Pillow `>= 13.0.0`, which fixes decoder vulnerabilities reachable from
+  `econte sheet` (for example CVE-2026-112403 and CVE-2026-112900).
+- CI runs with a read-only token, `npm ci --ignore-scripts` and Node 22
+  (Node 20 reached end of life in April 2026). New `security.yml` workflow:
+  CodeQL for Python, TypeScript and the workflows, `pip-audit`, and an
+  `npm audit` gate with an explicit allowlist, on every change and weekly.
+  Also new: Dependabot config, `SECURITY.md`, and `.oss-scanner/` (scan
+  profile, threat model, findings ledger, baseline, offline-auditable
+  Dockerfile).
+- Development dependencies: vitest 2 → 5 plus a non-breaking
+  `npm audit fix`, which clears two critical advisories (the vitest UI
+  server; tinypool) and the high and moderate ones in vite, esbuild,
+  brace-expansion, js-yaml and source-map-js. `npm audit` now reports only
+  the runtime zod advisory above.
+
+### Changed
+- **Breaking:** Python 3.11 or newer is required. Python 3.10 reached end
+  of life in October 2026, and Pillow 13 (above) does not support it.
+- `econte sheet` no longer decodes keyframes in formats other than PNG, JPEG
+  and WebP; they get a placeholder.
+
 ### Added
 - `constraints.max_frames` — a per-profile frame budget, checked against each
   job's resolved `frames` before any network call. Unlike `max_megapixels`

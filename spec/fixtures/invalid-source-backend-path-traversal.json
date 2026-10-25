@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "source.backend is a profile id, never a path", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        { "id": "S01-A", "frames": [0, 120], "source": { "type": "generate", "backend": "../../evil", "prompt": "p", "approved": false } }
+      ]
+    }
+  ]
+}

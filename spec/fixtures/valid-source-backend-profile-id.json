@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "metadata": { "title": "source.backend as a plain profile id", "fps": 24, "aspectRatios": ["16:9"] },
+  "characters": [],
+  "scenes": [
+    {
+      "id": "S01",
+      "shots": [
+        { "id": "S01-A", "frames": [0, 120], "source": { "type": "generate", "backend": "qwen-image-edit-2511", "prompt": "p", "approved": false } }
+      ]
+    }
+  ]
+}

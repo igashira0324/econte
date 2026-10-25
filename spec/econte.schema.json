@@ -39,7 +39,8 @@
                 "type": "string",
                 "pattern": "^\\d+:\\d+$"
               },
-              "minItems": 1
+              "minItems": 1,
+              "maxItems": 16
             },
             "concept": {
               "type": "string"
@@ -70,7 +71,8 @@
                 "items": {
                   "type": "string"
                 },
-                "minItems": 1
+                "minItems": 1,
+                "maxItems": 100
               }
             },
             "required": [
@@ -79,7 +81,8 @@
               "refs"
             ],
             "additionalProperties": false
-          }
+          },
+          "maxItems": 200
         },
         "globalStyle": {
           "type": "object",
@@ -89,7 +92,8 @@
               "items": {
                 "type": "string",
                 "pattern": "^#[0-9a-fA-F]{6}$"
-              }
+              },
+              "maxItems": 64
             },
             "grade": {
               "type": "string"
@@ -98,7 +102,8 @@
               "type": "array",
               "items": {
                 "type": "string"
-              }
+              },
+              "maxItems": 256
             }
           },
           "additionalProperties": false
@@ -204,7 +209,8 @@
                           ]
                         },
                         "backend": {
-                          "type": "string"
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9_-]+$"
                         },
                         "keyframe": {
                           "type": "string"
@@ -291,7 +297,8 @@
                   ],
                   "additionalProperties": false
                 },
-                "minItems": 1
+                "minItems": 1,
+                "maxItems": 2000
               }
             },
             "required": [
@@ -300,7 +307,8 @@
             ],
             "additionalProperties": false
           },
-          "minItems": 1
+          "minItems": 1,
+          "maxItems": 1000
         }
       },
       "required": [

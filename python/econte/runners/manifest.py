@@ -55,7 +55,11 @@ class ManifestJob(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    id: str
+    # `id` is forwarded to ComfyUI as part of `filename_prefix`
+    # (``"<output_prefix>/<id>"``) and names the report's output file, so it
+    # is restricted to the slug alphabet -- a shared manifest must not be
+    # able to smuggle "..", "/" or "\\" into a file name.
+    id: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     seed: int
     prompt: str
 
@@ -65,8 +69,12 @@ class Manifest(BaseModel):
 
     model_config = ConfigDict(extra="ignore")
 
-    profile: str
-    output_prefix: str
+    # `profile` is used as ``profiles/<profile>.yaml`` and `output_prefix`
+    # becomes ComfyUI's `filename_prefix` (a path under its output
+    # directory); both are restricted to the slug alphabet so a shared
+    # manifest cannot point them outside those directories.
+    profile: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
+    output_prefix: str = Field(pattern=r"^[A-Za-z0-9_-]+$")
     defaults: dict[str, Any] = Field(default_factory=dict)
     jobs: list[ManifestJob] = Field(default_factory=list)
 

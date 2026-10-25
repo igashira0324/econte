@@ -143,7 +143,13 @@ Writes the updated storyboard back to the same path by default; `--output
 PATH` writes elsewhere instead (leaving the input untouched — useful for
 review-before-overwrite workflows).
 
-## `econte sheet <storyboard.json> [--output sheet.html] [--thumb-width 420]`
+A report job whose `file` is absolute, root-relative, has a drive letter,
+contains a `..` segment, or (with `--comfyui-output-dir`) resolves outside
+that directory is skipped and listed as `unsafe_path`. `econte run` derives
+`file` from the profile's `output.glob`, and reports are shared and
+hand-edited, so a report does not get to choose where a storyboard points.
+
+## `econte sheet <storyboard.json> [--output sheet.html] [--thumb-width 420] [--allow-external-keyframes]`
 
 Generates a single self-contained HTML file — no external requests, no
 build step, opens directly in a browser — for human approval review. One
@@ -152,7 +158,14 @@ card per shot, in document order (scene by scene), showing:
 - The keyframe thumbnail if `shot.source.keyframe` is set (base64-embedded
   JPEG, resized to `--thumb-width`, so the file stays reasonably sized and
   works offline/emailed/etc.) — a placeholder (not an error) if not yet
-  generated.
+  generated. Only files inside the storyboard's own directory are embedded:
+  a keyframe that resolves elsewhere (absolute path, `..`, a symlink out of
+  the tree) gets a placeholder instead, unless `--allow-external-keyframes`
+  is passed — a shared storyboard must not be able to pull arbitrary images
+  from the reviewer's disk into a sheet that then gets shared. Only PNG,
+  JPEG and WebP files are decoded (most image-decoder vulnerabilities are in
+  rarer formats); anything else gets a placeholder. Images above 64
+  megapixels are refused before decoding.
 - Shot id, `camera.framing` (shot-size abbreviation), `material` as a
   color-coded badge (a visual convention worth keeping consistent with the
   project's own prior art: chain/chain_start material in one color, family,

@@ -36,6 +36,18 @@ logger = logging.getLogger(__name__)
 # reasonable file size.
 _THUMB_JPEG_QUALITY = 82
 
+# A keyframe larger than this is refused before any pixel is decoded: a
+# storyboard is untrusted input, and an oversized image is the cheapest way
+# to exhaust memory through an image decoder. 64 megapixels is roughly
+# 8k x 8k -- far beyond any keyframe still.
+_MAX_KEYFRAME_PIXELS = 64_000_000
+
+# Keyframes are stills from an image model, so only these formats are
+# decoded. Most image-decoder vulnerabilities are in rarer formats (TIFF,
+# FlashPix, EPS via Ghostscript, ...), and an untrusted storyboard can name
+# any file.
+_KEYFRAME_FORMATS = ("PNG", "JPEG", "WEBP")
+
 _CSS = """
 :root {
   color-scheme: dark;
@@ -248,7 +260,16 @@ def _encode_thumbnail(image_path: Path, thumb_width: int) -> str | None:
     caller.
     """
     try:
-        with Image.open(image_path) as source_image:
+        with Image.open(image_path, formats=_KEYFRAME_FORMATS) as source_image:
+            # Image.open() only parses the header; check the declared size
+            # before load() decodes (and allocates) the pixels.
+            width, height = source_image.size
+            if width * height > _MAX_KEYFRAME_PIXELS:
+                logger.warning(
+                    "sheet: refusing keyframe image %s: %dx%d exceeds the %d-pixel limit",
+                    image_path, width, height, _MAX_KEYFRAME_PIXELS,
+                )
+                return None
             source_image.load()
 
             if source_image.mode in ("RGBA", "LA", "P"):
@@ -276,7 +297,19 @@ def _encode_thumbnail(image_path: Path, thumb_width: int) -> str | None:
         return None
 
 
-def _render_keyframe_cell(shot: Shot, storyboard_dir: Path, thumb_width: int) -> str:
+def _is_within(path: Path, directory: Path) -> bool:
+    """True if ``path`` resolves to a location inside ``directory`` (symlinks
+    followed, so a link that points out of the tree does not count)."""
+    try:
+        path.resolve().relative_to(directory.resolve())
+    except (ValueError, OSError):
+        return False
+    return True
+
+
+def _render_keyframe_cell(
+    shot: Shot, storyboard_dir: Path, thumb_width: int, allow_external: bool
+) -> str:
     keyframe = shot.source.keyframe if shot.source is not None else None
     if not keyframe:
         return _placeholder_html("not yet generated")
@@ -286,12 +319,27 @@ def _render_keyframe_cell(shot: Shot, storyboard_dir: Path, thumb_width: int) ->
     # resolves "/"-separated relative paths correctly on Windows too, so no
     # separator translation is needed.
     image_path = storyboard_dir / keyframe
+
+    # A storyboard is untrusted input and the sheet it produces is made to
+    # be shared: a keyframe path that escapes the storyboard's directory
+    # (absolute path, "..", a symlink out of the tree) must not be able to
+    # pull an arbitrary image from the reviewer's disk into that sheet.
+    if not allow_external and not _is_within(image_path, storyboard_dir):
+        return _placeholder_html(
+            f"keyframe outside the storyboard directory, not embedded: {keyframe} "
+            "(pass --allow-external-keyframes to embed it)"
+        )
+
     if not image_path.is_file():
         return _placeholder_html(f"keyframe file not found: {keyframe}")
 
     data_uri = _encode_thumbnail(image_path, thumb_width)
     if data_uri is None:
-        return _placeholder_html(f"keyframe file could not be read as an image: {keyframe}")
+        return _placeholder_html(
+            f"keyframe file could not be read as a PNG, JPEG or WebP image "
+            f"(or exceeds the size limit): "
+            f"{keyframe}"
+        )
 
     alt = html.escape(f"keyframe thumbnail for shot {shot.id}")
     return f'<img class="thumb" src="{data_uri}" alt="{alt}" loading="lazy">'
@@ -329,12 +377,14 @@ def _approval_badge_and_card_class(shot: Shot) -> tuple[str, str]:
     return "card-needs-review", '<span class="badge badge-needs-review">needs review</span>'
 
 
-def _render_shot_card(shot: Shot, storyboard_dir: Path, thumb_width: int) -> str:
+def _render_shot_card(
+    shot: Shot, storyboard_dir: Path, thumb_width: int, allow_external: bool
+) -> str:
     card_css_class, approval_badge = _approval_badge_and_card_class(shot)
 
     parts: list[str] = [f'<article class="card {card_css_class}">']
     parts.append('<div class="thumb-wrap">')
-    parts.append(_render_keyframe_cell(shot, storyboard_dir, thumb_width))
+    parts.append(_render_keyframe_cell(shot, storyboard_dir, thumb_width, allow_external))
     parts.append("</div>")
 
     parts.append('<div class="card-body">')
@@ -363,9 +413,14 @@ def _render_shot_card(shot: Shot, storyboard_dir: Path, thumb_width: int) -> str
     return "".join(parts)
 
 
-def _render_scene_section(scene: Scene, storyboard_dir: Path, thumb_width: int) -> str:
+def _render_scene_section(
+    scene: Scene, storyboard_dir: Path, thumb_width: int, allow_external: bool
+) -> str:
     heading = scene.id if not scene.section else f"{scene.id} — {scene.section}"
-    cards = "".join(_render_shot_card(shot, storyboard_dir, thumb_width) for shot in scene.shots)
+    cards = "".join(
+        _render_shot_card(shot, storyboard_dir, thumb_width, allow_external)
+        for shot in scene.shots
+    )
     return (
         '<section class="scene">'
         f'<h2 class="scene-heading">{html.escape(heading)}</h2>'
@@ -375,7 +430,11 @@ def _render_scene_section(scene: Scene, storyboard_dir: Path, thumb_width: int) 
 
 
 def build_sheet_html(
-    storyboard: Storyboard, *, storyboard_dir: Path, thumb_width: int = 420
+    storyboard: Storyboard,
+    *,
+    storyboard_dir: Path,
+    thumb_width: int = 420,
+    allow_external_keyframes: bool = False,
 ) -> str:
     """Render ``storyboard`` as a single self-contained HTML approval sheet.
 
@@ -395,7 +454,8 @@ def build_sheet_html(
     summary_line = format_summary_line(total, with_keyframe, approved)
 
     scene_sections = "".join(
-        _render_scene_section(scene, storyboard_dir, thumb_width) for scene in storyboard.scenes
+        _render_scene_section(scene, storyboard_dir, thumb_width, allow_external_keyframes)
+        for scene in storyboard.scenes
     )
 
     title = html.escape(storyboard.metadata.title)

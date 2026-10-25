@@ -1,0 +1,66 @@
+name: Security
+
+# Continuous vulnerability checks: CodeQL on both implementations and on the
+# workflows themselves, plus an audit of the runtime dependencies. Runs on
+# every change and weekly, so a newly published advisory against a
+# dependency surfaces within a week even when nothing in the repository
+# changed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [python, javascript-typescript, actions]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+      - uses: github/codeql-action/analyze@v4
+
+  dependency-audit:
+    name: dependency audit (pip-audit / npm audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: pip-audit the Python runtime dependencies
+        working-directory: python
+        # Auditing the project directory resolves pyproject.toml's runtime
+        # dependencies on their own, so the runner's packages do not count.
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip-audit --progress-spinner off .
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: packages/econte/package-lock.json
+      - name: npm audit the TypeScript runtime dependencies
+        working-directory: packages/econte
+        # Fails on any high or critical runtime advisory except those listed,
+        # each with its mitigation, in scripts/audit-gate.mjs.
+        run: |
+          npm ci --ignore-scripts
+          npm audit --omit=dev --json > npm-audit.json || true
+          node scripts/audit-gate.mjs npm-audit.json

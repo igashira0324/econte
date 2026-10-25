@@ -16,10 +16,10 @@ regardless of host OS.
 |---|---|---|---|
 | `version` | string | yes | semver, e.g. `"0.1.0"`. Pattern: `^\d+\.\d+\.\d+$` |
 | `metadata` | `Metadata` | yes | |
-| `characters` | `Character[]` | yes | may be `[]`. All `id`s unique within this array |
+| `characters` | `Character[]` | yes | may be `[]`, at most 200 entries. All `id`s unique within this array |
 | `globalStyle` | `GlobalStyle` | no | |
 | `audioAnalysis` | string | no | path to a beat/section analysis JSON produced elsewhere (e.g. librosa) — econte does not read or validate its contents, only carries the reference |
-| `scenes` | `Scene[]` | yes | must be non-empty |
+| `scenes` | `Scene[]` | yes | must be non-empty; at most 1000 entries |
 
 ## `Metadata`
 
@@ -30,7 +30,7 @@ regardless of host OS.
 | `audio` | string | no | path to the mixed/master audio file |
 | `durationInSeconds` | number | no | must be `> 0` if present. Should be a measured value (e.g. via ffprobe), not eyeballed — this is a documentation convention, not a machine-checkable rule |
 | `fps` | integer | yes | `> 0` |
-| `aspectRatios` | string[] | yes | non-empty; each entry matches `^\d+:\d+$` (e.g. `"16:9"`, `"9:16"`) |
+| `aspectRatios` | string[] | yes | non-empty, at most 16 entries; each entry matches `^\d+:\d+$` (e.g. `"16:9"`, `"9:16"`) |
 | `concept` | string | no | one-sentence emotional/creative compass for the piece |
 
 ## `Character`
@@ -39,15 +39,15 @@ regardless of host OS.
 |---|---|---|---|
 | `id` | string | yes | matches `^[a-z][a-z0-9_-]*$`; unique across `characters[]`. Referenced from `Shot.subject` as `"@" + id` |
 | `identity` | string | yes | non-empty, recommended ≤200 chars — a short enough description to paste into every prompt that needs this character |
-| `refs` | string[] | yes | non-empty; paths to reference images (front/side/back turnaround, expression sheet, etc.) |
+| `refs` | string[] | yes | non-empty, at most 100 entries; paths to reference images (front/side/back turnaround, expression sheet, etc.) |
 
 ## `GlobalStyle`
 
 | field | type | required | notes |
 |---|---|---|---|
-| `palette` | string[] | no | each entry a 6-digit hex color, `^#[0-9a-fA-F]{6}$` |
+| `palette` | string[] | no | at most 64 entries, each a 6-digit hex color, `^#[0-9a-fA-F]{6}$` |
 | `grade` | string | no | free-text color-grade description |
-| `negative` | string[] | no | free-text negative-prompt terms applied to every shot by convention (consumers decide how to merge with per-shot negatives; econte does not merge them itself) |
+| `negative` | string[] | no | at most 256 entries; free-text negative-prompt terms applied to every shot by convention (consumers decide how to merge with per-shot negatives; econte does not merge them itself) |
 
 ## `Scene`
 
@@ -55,7 +55,7 @@ regardless of host OS.
 |---|---|---|---|
 | `id` | string | yes | matches `^[A-Za-z0-9_-]+$`; unique across `scenes[]` |
 | `section` | string | no | free text (e.g. `"verse1"`, `"chorus"`) — deliberately not an enum; song structure vocabularies vary too much to fix one |
-| `shots` | `Shot[]` | yes | must be non-empty |
+| `shots` | `Shot[]` | yes | must be non-empty; at most 2000 entries |
 
 ## `Shot`
 
@@ -85,7 +85,7 @@ regardless of host OS.
 | field | type | required | notes |
 |---|---|---|---|
 | `type` | enum | yes | `generate` \| `asset` \| `remotion` — `generate` = AI-generated from `prompt`; `asset` = pre-existing file dropped in as-is; `remotion` = built by editor-side code (title cards, typography), not an image/video file at all |
-| `backend` | string | no | a `profiles/*.yaml` profile id (e.g. `"qwen-image-edit-2511"`); meaningless/absent when `type != "generate"` |
+| `backend` | string | no | a `profiles/*.yaml` profile id (e.g. `"qwen-image-edit-2511"`); meaningless/absent when `type != "generate"`. Pattern: `^[A-Za-z0-9_-]+$` — it is used as a file-name component by `econte compile`, so path separators, `..` and drive letters are rejected |
 | `keyframe` | string | no | path to the approved (or candidate) keyframe still image |
 | `seed` | integer | no | for reproducibility of `type: "generate"` shots |
 | `prompt` | string | no | the generation prompt, in whatever language the backend expects (convention: English, regardless of `idea`/`action`'s language) |
@@ -120,7 +120,7 @@ Both implementations must enforce all of these, not just per-field types:
 4. `Shot.frames`: `frames[1] > frames[0]`.
 5. `Shot.subject`, if it starts with `"@"`, must reference an existing `Character.id` (i.e. `subject == "@" + c.id` for some `c` in `characters[]`). A `subject` that does not start with `"@"` is not currently a defined convention in v1 — implementations should reject it (reserved for future non-character subjects).
 6. `Lyric.endMs > Lyric.startMs`.
-7. `scenes` non-empty; every `scene.shots` non-empty; `characters` may be empty; `metadata.aspectRatios` non-empty.
+7. `scenes` non-empty; every `scene.shots` non-empty; `characters` may be empty; `metadata.aspectRatios` non-empty. Upper bounds: `metadata.aspectRatios` ≤ 16, `characters` ≤ 200, `refs` ≤ 100, `palette` ≤ 64, `negative` ≤ 256, `scenes` ≤ 1000, `shots` per scene ≤ 2000, and ≤ 10000 shots in the whole document — far above any real storyboard; they exist so a validator's work on an untrusted document is bounded. Implementations check these bounds before validating any element, so rejecting an oversized document costs no more than rejecting a small one.
 8. `Shot.source.chain_from`, if present, must reference an existing `Shot.id` elsewhere in the document (same global id space as rule 3 — any scene, not just the same one). Self-reference (`chain_from == id` of the shot it's set on) is rejected as a special case of "must reference an existing shot" that can never be meaningful.
 
 ## Fixtures (`spec/fixtures/`)
